@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button';
 import ShareModal from './ShareModal';
 
 const TopBar = () => {
-  const { collaborators } = useEditorStore();
   const [showShareModal, setShowShareModal] = useState(false);
+  const { collaborators, role, setRole, onlineUsers } = useEditorStore();
 
   return (
     <>
@@ -19,7 +19,18 @@ const TopBar = () => {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <Users className="w-4 h-4 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">Collaborators:</span>
+            <span className="text-sm text-muted-foreground mr-2">Online: {onlineUsers.length}</span>
+
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value as any)}
+              className="bg-background border border-border text-xs rounded px-2 py-1 outline-none text-muted-foreground mr-6"
+            >
+              <option value="owner">Owner (Full Access)</option>
+              <option value="editor">Editor (Can Type)</option>
+              <option value="viewer">Viewer (Read Only)</option>
+            </select>
+            
             <div className="flex -space-x-2">
               {collaborators.map((collab, i) => (
                 <div
@@ -47,7 +58,10 @@ const TopBar = () => {
         </div>
       </div>
 
-      <ShareModal open={showShareModal} onOpenChange={setShowShareModal} />
+      <ShareModal 
+        open={showShareModal} 
+        onOpenChange={setShowShareModal} 
+      />
     </>
   );
 };

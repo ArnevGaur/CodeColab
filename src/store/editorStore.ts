@@ -28,10 +28,12 @@ interface EditorState {
   files: FileNode[];
   collaborators: Collaborator[];
   chatMessages: ChatMessage[];
+  onlineUsers: { name: string; color: string; id: number }[];
   terminalOpen: boolean;
   leftSidebarOpen: boolean;
   rightSidebarOpen: boolean;
-  leftSidebarTab: 'files' | 'chat' | 'ai' | 'settings';
+  leftSidebarTab: 'files' | 'chat' | 'ai' | 'settings' | 'history';
+  role: 'owner' | 'editor' | 'viewer';
   
   setCurrentFile: (fileId: string) => void;
   addFile: (file: FileNode) => void;
@@ -40,8 +42,10 @@ interface EditorState {
   toggleTerminal: () => void;
   toggleLeftSidebar: () => void;
   toggleRightSidebar: () => void;
-  setLeftSidebarTab: (tab: 'files' | 'chat' | 'ai' | 'settings') => void;
+  setLeftSidebarTab: (tab: 'files' | 'chat' | 'ai' | 'settings' | 'history') => void;
   setChatMessages: (messages: ChatMessage[]) => void;
+  setOnlineUsers: (users: { name: string; color: string; id: number }[]) => void;
+  setRole: (role: 'owner' | 'editor' | 'viewer') => void;
 }
 
 export const useEditorStore = create<EditorState>((set) => ({
@@ -75,10 +79,12 @@ Happy coding! 💻
   ],
   collaborators: [],
   chatMessages: [],
+  onlineUsers: [],
   terminalOpen: false,
   leftSidebarOpen: true,
   rightSidebarOpen: true,
   leftSidebarTab: 'files',
+  role: 'owner',
 
   setCurrentFile: (fileId) => set({ currentFile: fileId }),
   addFile: (file) => set((state) => ({ files: [...state.files, file] })),
@@ -91,8 +97,10 @@ Happy coding! 💻
   addChatMessage: (message) =>
     set((state) => ({ chatMessages: [...state.chatMessages, message] })),
   setChatMessages: (messages) => set({ chatMessages: messages }),
+  setOnlineUsers: (users) => set({ onlineUsers: users }),
   toggleTerminal: () => set((state) => ({ terminalOpen: !state.terminalOpen })),
   toggleLeftSidebar: () => set((state) => ({ leftSidebarOpen: !state.leftSidebarOpen })),
   toggleRightSidebar: () => set((state) => ({ rightSidebarOpen: !state.rightSidebarOpen })),
   setLeftSidebarTab: (tab) => set({ leftSidebarTab: tab }),
+  setRole: (role) => set({ role }),
 }));

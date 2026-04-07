@@ -66,4 +66,33 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Yjs Presence Awareness Cursors */
+  .yRemoteSelection {
+    background-color: var(--yjs-color);
+    opacity: 0.3;
+  }
+  .yRemoteSelectionHead {
+    position: absolute;
+    box-sizing: border-box;
+    border-left: 2px solid var(--yjs-color);
+  }
+  .yRemoteSelectionHead::after {
+    position: absolute;
+    content: attr(data-client-name);
+    bottom: 100%;
+    left: 0;
+    background: var(--yjs-color);
+    color: white;
+    font-size: 10px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+  }
+  .yRemoteSelectionHead:hover::after {
+    opacity: 1;
+  }
 }

@@ -1,8 +1,9 @@
-import { FileText, MessageSquare, Sparkles, Settings } from 'lucide-react';
+import { FileText, MessageSquare, Sparkles, Settings, History } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useEditorStore } from '@/store/editorStore';
 import { Button } from '@/components/ui/button';
 import FileExplorer from './FileExplorer';
+import HistoryPanel from './HistoryPanel';
 import * as Y from 'yjs';
 
 interface SidebarProps {
@@ -14,6 +15,7 @@ const Sidebar = ({ doc }: SidebarProps) => {
 
   const tabs = [
     { id: 'files' as const, icon: FileText, label: 'Files' },
+    { id: 'history' as const, icon: History, label: 'History' },
     { id: 'chat' as const, icon: MessageSquare, label: 'Chat' },
     { id: 'ai' as const, icon: Sparkles, label: 'AI' },
     { id: 'settings' as const, icon: Settings, label: 'Settings' },
@@ -48,6 +50,7 @@ const Sidebar = ({ doc }: SidebarProps) => {
 
       <div className="w-56 h-full">
         {leftSidebarTab === 'files' && <FileExplorer doc={doc} />}
+        {leftSidebarTab === 'history' && <HistoryPanel doc={doc} />}
         {leftSidebarTab === 'chat' && (
           <div className="h-full bg-surface border-r border-border p-4">
             <p className="text-sm text-muted-foreground">Team chat coming soon...</p>
