@@ -17,15 +17,10 @@ const wss = new WebSocket.Server({ noServer: true });
 wss.on('connection', setupWSConnection);
 
 server.on('upgrade', (request, socket, head) => {
-  // Handle websocket upgrade, optionally verify JWT role here
-  // For now, accept all upgrades to /yjs-websocket
-  if (request.url.startsWith('/yjs-websocket')) {
-    wss.handleUpgrade(request, socket, head, (ws) => {
-      wss.emit('connection', ws, request);
-    });
-  } else {
-    socket.destroy();
-  }
+  // Accept all websocket upgrade requests (browsers connect directly)
+  wss.handleUpgrade(request, socket, head, (ws) => {
+    wss.emit('connection', ws, request);
+  });
 });
 
 // Middleware

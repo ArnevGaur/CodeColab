@@ -28,21 +28,25 @@ const FileExplorer = ({ doc }: FileExplorerProps) => {
     if (!doc) return;
     const fileMap = doc.getMap('files');
     
-    // Sync initial state immediately for late joiners
-    const filesArray = Array.from(fileMap.values()) as any[];
-    if (filesArray.length > 0) {
-      useEditorStore.setState({ files: filesArray });
+    // If the Yjs map is empty, seed it with default files from the store
+    // (this happens for the first user to join a new room)
+    if (fileMap.size === 0) {
+      const defaultFiles = useEditorStore.getState().files;
+      defaultFiles.forEach(f => fileMap.set(f.id, f));
     }
     
-    // Observe file creations from others
-    const observer = () => {
-      const updatedFilesArray = Array.from(fileMap.values()) as any[];
-      if (updatedFilesArray.length > 0) {
-        useEditorStore.setState({ files: updatedFilesArray });
+    // Sync from Yjs map → store (covers late joiners who see existing files)
+    const syncFromMap = () => {
+      const filesArray = Array.from(fileMap.values()) as any[];
+      if (filesArray.length > 0) {
+        useEditorStore.setState({ files: filesArray });
       }
     };
-    fileMap.observe(observer);
-    return () => fileMap.unobserve(observer);
+    syncFromMap();
+    
+    // Observe all future changes (local + remote)
+    fileMap.observe(syncFromMap);
+    return () => fileMap.unobserve(syncFromMap);
   }, [doc]);
 
   const handleCreateFile = () => {
@@ -72,12 +76,11 @@ const FileExplorer = ({ doc }: FileExplorerProps) => {
       content: defaultContent,
     };
     
-    // Broadcast creation to everyone using Yjs
+    // Broadcast creation to everyone via Yjs (the observer updates the store)
     const fileMap = doc.getMap('files');
     fileMap.set(newFile.id, newFile);
     
-    // Local fallback
-    addFile(newFile);
+    // Switch to the new file
     setCurrentFile(newFile.id);
     setIsCreating(false);
     setNewFileName('');

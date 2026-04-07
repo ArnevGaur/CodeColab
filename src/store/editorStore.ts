@@ -29,7 +29,7 @@ interface EditorState {
   files: FileNode[];
   collaborators: Collaborator[];
   chatMessages: ChatMessage[];
-  onlineUsers: { name: string; color: string; id: number }[];
+  onlineUsers: { name: string; color: string; clientId: number; currentFile?: string }[];
   terminalOpen: boolean;
   leftSidebarOpen: boolean;
   rightSidebarOpen: boolean;
@@ -45,7 +45,7 @@ interface EditorState {
   toggleRightSidebar: () => void;
   setLeftSidebarTab: (tab: 'files' | 'chat' | 'ai' | 'settings' | 'history') => void;
   setChatMessages: (messages: ChatMessage[]) => void;
-  setOnlineUsers: (users: { name: string; color: string; id: number }[]) => void;
+  setOnlineUsers: (users: { name: string; color: string; clientId: number; currentFile?: string }[]) => void;
   setRole: (role: 'owner' | 'editor' | 'viewer') => void;
 }
 

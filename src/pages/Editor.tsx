@@ -1,6 +1,6 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Editor from '@monaco-editor/react';
+import MonacoEditor from '@monaco-editor/react';
 import { ChevronLeft, ChevronRight, ChevronUp } from 'lucide-react';
 import { useEditorStore } from '@/store/editorStore';
 import { Button } from '@/components/ui/button';
@@ -32,14 +32,85 @@ const EditorPage = () => {
 
   const [onlineUsers, setOnlineUsers] = useState(1);
   const [isDocReady, setIsDocReady] = useState(false);
+
+  // Persistent refs across file switches — these survive the entire session
   const providerRef = useRef<WebsocketProvider | null>(null);
-  const bindingRef = useRef<any>(null);
   const docRef = useRef<Y.Doc | null>(null);
   const indexeddbProviderRef = useRef<IndexeddbPersistence | null>(null);
 
+  // These change every time the user switches files
+  const bindingRef = useRef<any>(null);
+  const editorRef = useRef<any>(null);
+  const monacoRef = useRef<any>(null);
+
+  // Track which file is currently bound so we don't re-bind unnecessarily
+  const boundFileRef = useRef<string | null>(null);
+
+  // ─── Bind editor to the Y.Text for a specific file ─────────────────────
+  const bindToFile = useCallback((fileId: string) => {
+    const editor = editorRef.current;
+    const monaco = monacoRef.current;
+    const doc = docRef.current;
+    const provider = providerRef.current;
+
+    if (!editor || !monaco || !doc || !provider) return;
+    if (boundFileRef.current === fileId) return; // already bound
+
+    // Destroy previous binding
+    if (bindingRef.current) {
+      bindingRef.current.destroy();
+      bindingRef.current = null;
+    }
+
+    // Each file gets its own named Y.Text inside the shared Y.Doc
+    const yText = doc.getText(`file:${fileId}`);
+
+    // If the Y.Text is empty and we have local content, seed it
+    if (yText.length === 0) {
+      const localFile = useEditorStore.getState().files.find(f => f.id === fileId);
+      if (localFile?.content) {
+        yText.insert(0, localFile.content);
+      }
+    }
+
+    // Create a fresh model for the new file
+    const fileName = useEditorStore.getState().files.find(f => f.id === fileId)?.name || 'untitled';
+    const language = getLanguageFromExtension(fileName);
+    const existingModel = monaco.editor.getModels().find(
+      (m: any) => m.uri.path === `/${fileId}`
+    );
+
+    let model: any;
+    if (existingModel) {
+      model = existingModel;
+    } else {
+      model = monaco.editor.createModel(
+        yText.toString(),
+        language,
+        monaco.Uri.parse(`file:///${fileId}`)
+      );
+    }
+
+    editor.setModel(model);
+
+    // Bind Yjs <-> Monaco
+    const binding = new MonacoBinding(
+      yText,
+      model,
+      new Set([editor]),
+      provider.awareness
+    );
+    bindingRef.current = binding;
+    boundFileRef.current = fileId;
+
+    // Update awareness to broadcast which file we're editing
+    provider.awareness.setLocalStateField('currentFile', fileId);
+  }, []);
+
+  // ─── Initialize Y.Doc, WebSocket, and IndexedDB once on mount ──────────
   useEffect(() => {
     return () => {
-      // Clean up WebSocket connection and CRDT listeners on unmount
+      // Clean up everything on unmount
       bindingRef.current?.destroy();
       providerRef.current?.disconnect();
       indexeddbProviderRef.current?.destroy();
@@ -47,90 +118,90 @@ const EditorPage = () => {
     };
   }, []);
 
+  // ─── Re-bind when the selected file changes ────────────────────────────
+  useEffect(() => {
+    if (currentFile && editorRef.current && docRef.current) {
+      bindToFile(currentFile);
+    }
+  }, [currentFile, bindToFile]);
+
+  // ─── Monaco onMount: set up Yjs infrastructure + initial binding ───────
   const handleEditorMount = (editor: any, monaco: any) => {
+    editorRef.current = editor;
+    monacoRef.current = monaco;
+
     const doc = new Y.Doc();
     docRef.current = doc;
 
     const roomName = `codecolab-room-${projectId || 'demo'}`;
-    
-    // Setup local indexed-db persistence
+
+    // Setup local IndexedDB persistence
     const indexeddbProvider = new IndexeddbPersistence(roomName, doc);
     indexeddbProviderRef.current = indexeddbProvider;
-    
+
     indexeddbProvider.on('synced', () => {
       setIsDocReady(true);
     });
 
-    // Using our newly built local generic WebSocket backend proxy matching '/yjs-websocket'
-    const wsUrl = window.location.protocol === 'https:' 
-      ? `wss://${window.location.host}/yjs-websocket` 
-      : `ws://${window.location.host}/yjs-websocket`;
+    // Connect to backend WebSocket server
+    const wsHost = window.location.hostname;
+    const wsUrl = `ws://${wsHost}:5005`;
     const provider = new WebsocketProvider(wsUrl, roomName, doc);
     providerRef.current = provider;
 
-    const colors = ['#f87171', '#fb923c', '#fbbf24', '#a3e635', '#4ade80', '#34d399', '#2dd4bf'];
+    // Assign a random color and name for this user
+    const colors = ['#f87171', '#fb923c', '#fbbf24', '#a3e635', '#4ade80', '#34d399', '#2dd4bf', '#38bdf8', '#818cf8', '#c084fc', '#f472b6'];
     const myColor = colors[Math.floor(Math.random() * colors.length)];
-    const myName = `Anon ${Math.floor(Math.random() * 100)}`;
-    
-    // Yjs injects the color directly via style tag, but we also attach it via CSS var for our custom labels
+    const myName = `User ${Math.floor(Math.random() * 1000)}`;
+
     provider.awareness.setLocalStateField('user', {
       name: myName,
-      color: myColor
+      color: myColor,
     });
 
-    const type = doc.getText('monaco');
-    const binding = new MonacoBinding(type, editor.getModel(), new Set([editor]), provider.awareness);
-    bindingRef.current = binding;
+    // ─── Awareness change handler: sync online users + cursor labels ───
+    const handleAwarenessChange = () => {
+      const states = Array.from(provider.awareness.getStates().entries());
+      const users: { name: string; color: string; clientId: number; currentFile?: string }[] = [];
 
-    provider.awareness.on('change', () => {
-      const states = Array.from(provider.awareness.getStates().values());
-      // @ts-ignore
-      const users = states.map(s => s.user).filter(Boolean);
+      for (const [clientId, state] of states) {
+        if (state.user) {
+          users.push({
+            name: state.user.name,
+            color: state.user.color,
+            clientId: clientId as number,
+            currentFile: state.currentFile,
+          });
+        }
+      }
+
       useEditorStore.getState().setOnlineUsers(users);
-      setOnlineUsers(provider.awareness.getStates().size);
+      setOnlineUsers(users.length);
 
-      // Inject the names into the DOM elements generated by y-monaco
+      // Inject user names into y-monaco cursor DOM elements
       setTimeout(() => {
         const cursorHeads = document.querySelectorAll('.yRemoteSelectionHead');
         cursorHeads.forEach((head) => {
-          // The color is applied inline to the style by y-monaco
           const color = (head as HTMLElement).style.borderColor;
           (head as HTMLElement).style.setProperty('--yjs-color', color);
-          
-          // Match the color to the user's name to display it dynamically
-          const matchedUser = users.find(u => CSS.supports('color', u.color) || u.color === color);
-          if (matchedUser) {
-            head.setAttribute('data-client-name', matchedUser.name);
-          } else {
-             head.setAttribute('data-client-name', 'Collaborator');
-          }
+
+          const matchedUser = users.find(u => u.color === color);
+          head.setAttribute('data-client-name', matchedUser?.name || 'Collaborator');
         });
       }, 100);
-    });
-  };
+    };
 
-  const currentFileName = files.find((f) => f.id === currentFile)?.name || 'Untitled';
-  
-  const getLanguageFromExtension = (filename: string) => {
-    const ext = filename.split('.').pop()?.toLowerCase();
-    switch (ext) {
-      case 'ts': case 'tsx': return 'typescript';
-      case 'js': case 'jsx': return 'javascript';
-      case 'py': return 'python';
-      case 'go': return 'go';
-      case 'java': return 'java';
-      case 'c': case 'cpp': case 'h': case 'hpp': return 'cpp';
-      case 'cs': return 'csharp';
-      case 'html': return 'html';
-      case 'css': return 'css';
-      case 'json': return 'json';
-      case 'md': return 'markdown';
-      case 'sql': return 'sql';
-      case 'sh': case 'bash': return 'shell';
-      default: return 'plaintext';
+    provider.awareness.on('change', handleAwarenessChange);
+
+    // ─── Bind to the initially selected file ───
+    const initialFile = useEditorStore.getState().currentFile;
+    if (initialFile) {
+      bindToFile(initialFile);
     }
   };
-  const language = getLanguageFromExtension(currentFileName);
+
+  // ─── Helpers ─────────────────────────────────────────────────────────────
+  const currentFileName = files.find((f) => f.id === currentFile)?.name || 'Untitled';
 
   return (
     <div className="h-screen flex flex-col bg-background">
@@ -162,9 +233,9 @@ const EditorPage = () => {
         {/* Editor */}
         <ResizablePanel defaultSize={60} minSize={30} className="flex flex-col">
           <div className="flex-1 overflow-hidden relative">
-            <Editor
+            <MonacoEditor
               height="100%"
-              language={language}
+              language={getLanguageFromExtension(currentFileName)}
               onMount={handleEditorMount}
               theme="vs-dark"
               options={{
@@ -211,8 +282,8 @@ const EditorPage = () => {
                 <span>👥 {onlineUsers} collaborator{onlineUsers !== 1 ? 's' : ''} online</span>
               </div>
               <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                <span>TypeScript</span>
-                <span>Ln 15, Col 22</span>
+                <span>{getLanguageFromExtension(currentFileName)}</span>
+                <span>{currentFileName}</span>
               </div>
             </div>
           )}
@@ -245,5 +316,26 @@ const EditorPage = () => {
     </div>
   );
 };
+
+// ─── Language detection helper (module-level for reuse) ───────────────────
+function getLanguageFromExtension(filename: string): string {
+  const ext = filename.split('.').pop()?.toLowerCase();
+  switch (ext) {
+    case 'ts': case 'tsx': return 'typescript';
+    case 'js': case 'jsx': return 'javascript';
+    case 'py': return 'python';
+    case 'go': return 'go';
+    case 'java': return 'java';
+    case 'c': case 'cpp': case 'h': case 'hpp': return 'cpp';
+    case 'cs': return 'csharp';
+    case 'html': return 'html';
+    case 'css': return 'css';
+    case 'json': return 'json';
+    case 'md': return 'markdown';
+    case 'sql': return 'sql';
+    case 'sh': case 'bash': return 'shell';
+    default: return 'plaintext';
+  }
+}
 
 export default EditorPage;

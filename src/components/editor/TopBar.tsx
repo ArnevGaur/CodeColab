@@ -1,50 +1,80 @@
 import { useState } from 'react';
-import { Share2, Users } from 'lucide-react';
+import { Share2, Users, Circle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useEditorStore } from '@/store/editorStore';
 import { Button } from '@/components/ui/button';
 import ShareModal from './ShareModal';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 const TopBar = () => {
   const [showShareModal, setShowShareModal] = useState(false);
-  const { collaborators, role, setRole, onlineUsers } = useEditorStore();
+  const { role, setRole, onlineUsers, files } = useEditorStore();
+
+  // Helper: get a file name from its ID
+  const getFileName = (fileId?: string) => {
+    if (!fileId) return 'No file';
+    const file = files.find(f => f.id === fileId);
+    return file?.name || fileId;
+  };
 
   return (
     <>
       <div className="h-12 bg-card border-b border-border flex items-center justify-between px-4">
         <div className="flex items-center gap-3">
-          <span className="text-sm font-medium text-foreground">demo-project.tsx</span>
+          <span className="text-sm font-medium text-foreground">CodeMate</span>
+          <span className="text-xs text-muted-foreground">·</span>
+          <span className="text-xs text-muted-foreground">
+            {onlineUsers.length} online
+          </span>
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <Users className="w-4 h-4 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground mr-2">Online: {onlineUsers.length}</span>
+          {/* Role selector */}
+          <select
+            value={role}
+            onChange={(e) => setRole(e.target.value as any)}
+            className="bg-background border border-border text-xs rounded px-2 py-1 outline-none text-muted-foreground"
+          >
+            <option value="owner">Owner (Full Access)</option>
+            <option value="editor">Editor (Can Type)</option>
+            <option value="viewer">Viewer (Read Only)</option>
+          </select>
 
-            <select
-              value={role}
-              onChange={(e) => setRole(e.target.value as any)}
-              className="bg-background border border-border text-xs rounded px-2 py-1 outline-none text-muted-foreground mr-6"
-            >
-              <option value="owner">Owner (Full Access)</option>
-              <option value="editor">Editor (Can Type)</option>
-              <option value="viewer">Viewer (Read Only)</option>
-            </select>
-            
-            <div className="flex -space-x-2">
-              {collaborators.map((collab, i) => (
-                <div
-                  key={collab.id}
-                  className="w-8 h-8 rounded-full border-2 border-card flex items-center justify-center text-xs font-medium text-white"
-                  style={{ backgroundColor: collab.color }}
-                  title={collab.name}
-                >
-                  {collab.name[0]}
-                </div>
-              ))}
-            </div>
+          {/* Live user avatars */}
+          <div className="flex items-center -space-x-2">
+            {onlineUsers.map((user, i) => (
+              <Tooltip key={user.clientId}>
+                <TooltipTrigger asChild>
+                  <motion.div
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0, opacity: 0 }}
+                    transition={{ duration: 0.2, delay: i * 0.05 }}
+                    className="relative w-8 h-8 rounded-full border-2 border-card flex items-center justify-center text-xs font-bold text-white cursor-default shadow-md"
+                    style={{ backgroundColor: user.color, zIndex: onlineUsers.length - i }}
+                  >
+                    {user.name.charAt(0).toUpperCase()}
+                    {/* Pulsing green dot */}
+                    <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-card">
+                      <span className="absolute inset-0 rounded-full bg-green-400 animate-ping opacity-75" />
+                    </span>
+                  </motion.div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="bg-card border-border text-xs">
+                  <div className="font-medium" style={{ color: user.color }}>{user.name}</div>
+                  <div className="text-muted-foreground text-[10px]">
+                    Editing: {getFileName(user.currentFile)}
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            ))}
           </div>
 
+          {/* Share button */}
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
             <Button
               onClick={() => setShowShareModal(true)}
@@ -58,9 +88,9 @@ const TopBar = () => {
         </div>
       </div>
 
-      <ShareModal 
-        open={showShareModal} 
-        onOpenChange={setShowShareModal} 
+      <ShareModal
+        open={showShareModal}
+        onOpenChange={setShowShareModal}
       />
     </>
   );

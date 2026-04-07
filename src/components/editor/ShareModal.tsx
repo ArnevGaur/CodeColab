@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { useParams } from 'react-router-dom';
 
 interface ShareModalProps {
   open: boolean;
@@ -22,7 +23,9 @@ const ShareModal = ({ open, onOpenChange }: ShareModalProps) => {
   const [copied, setCopied] = useState(false);
   const [permission, setPermission] = useState('edit');
   const { toast } = useToast();
-  const shareLink = `${window.location.origin}/editor/demo-project?share=true`;
+  const { projectId } = useParams();
+  const shareLink = `${window.location.origin}/editor/${projectId || 'demo-project'}`;
+
 
   const handleCopy = () => {
     navigator.clipboard.writeText(shareLink);
