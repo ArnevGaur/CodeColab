@@ -61,8 +61,11 @@ const EditorPage = () => {
       setIsDocReady(true);
     });
 
-    // Using demo Yjs signaling server for real-time WebSockets
-    const provider = new WebsocketProvider('wss://demos.yjs.dev/ws', roomName, doc);
+    // Using our newly built local generic WebSocket backend proxy matching '/ws'
+    const wsUrl = window.location.protocol === 'https:' 
+      ? `wss://${window.location.host}/ws` 
+      : `ws://${window.location.host}/ws`;
+    const provider = new WebsocketProvider(wsUrl, roomName, doc);
     providerRef.current = provider;
 
     const colors = ['#f87171', '#fb923c', '#fbbf24', '#a3e635', '#4ade80', '#34d399', '#2dd4bf'];

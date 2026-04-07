@@ -22,3 +22,14 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Environment Variables & Secrets (CONFIDENTIAL)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.cert
+
+# Specific to new backend
+server/node_modules/

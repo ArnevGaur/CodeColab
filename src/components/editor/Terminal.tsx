@@ -58,27 +58,43 @@ const Terminal = ({ doc }: TerminalProps) => {
          codeToExecute = doc.getText('monaco').toString();
       }
 
+      // Map file extension to Piston supported languages
+      const ext = fileName.split('.').pop()?.toLowerCase();
+      let execLang = 'javascript';
+      if (ext === 'py') execLang = 'python';
+      else if (ext === 'cpp' || ext === 'c') execLang = 'cpp';
+      else if (ext === 'java') execLang = 'java';
+      else if (ext === 'ts') execLang = 'typescript';
+      else if (ext === 'cs') execLang = 'csharp';
+
       fetch('/api/execute', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fileName: file.name, content: codeToExecute })
+        headers: { 
+          'Content-Type': 'application/json',
+          // Assuming authorization token exists
+          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+        },
+        body: JSON.stringify({ language: execLang, content: codeToExecute })
       })
       .then(res => res.json())
-      .then(data => {
-        if (data.error && !data.output) {
-          setHistory((prev) => [...prev, `Error: ${data.error}`]);
+      .then((data: any) => {
+        if (data.error) {
+          setHistory((prev) => [...prev, `Error (${data.error}): ${data.stderr ? data.stderr : ''}`]);
         } else {
-          // Break output into lines for distinct rendering
-          const lines = (data.output || '').split('\n').filter(Boolean);
-          if (data.error) {
-             const errLines = data.error.split('\n').filter(Boolean);
-             setHistory((prev) => [...prev, ...lines, ...errLines.map((e: string) => `Error: ${e}`), 'Process exited with code 1.']);
-          } else {
-             setHistory((prev) => [...prev, ...lines, 'Process exited with code 0.']);
-          }
+          const outLines = (data.stdout || '').split('\n').filter(Boolean);
+          const errLines = (data.stderr || '').split('\n').filter(Boolean);
+          const compLines = (data.compile_output || '').split('\n').filter(Boolean);
+          
+          setHistory((prev) => [
+            ...prev,
+            ...compLines.map((l: string) => `Compiler: ${l}`),
+            ...outLines,
+            ...errLines.map((e: string) => `Error: ${e}`),
+            `Process exited with code ${data.code !== undefined ? data.code : 'unknown'}`
+          ]);
         }
       })
-      .catch(err => {
+      .catch((err: any) => {
         setHistory((prev) => [...prev, `Error connecting to execution server: ${err.message}`]);
       });
       return;
