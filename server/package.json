@@ -23,9 +23,11 @@
     "mongoose": "^9.4.1",
     "morgan": "^1.10.1",
     "nodemailer": "^8.0.5",
+    "socket.io": "^4.8.3",
     "winston": "^3.19.0",
     "ws": "^8.20.0",
-    "y-websocket": "^1.4.3",
+    "y-mongodb-provider": "^0.2.1",
+    "y-websocket": "^3.0.0",
     "yjs": "^13.6.30"
   },
   "devDependencies": {

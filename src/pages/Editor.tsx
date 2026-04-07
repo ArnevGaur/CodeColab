@@ -14,6 +14,8 @@ import { WebsocketProvider } from 'y-websocket';
 import { MonacoBinding } from 'y-monaco';
 import { IndexeddbPersistence } from 'y-indexeddb';
 import { useParams } from 'react-router-dom';
+import socket from '@/lib/socket';
+import { useToast } from '@/hooks/use-toast';
 
 const EditorPage = () => {
   const { projectId } = useParams();
@@ -32,6 +34,10 @@ const EditorPage = () => {
 
   const [onlineUsers, setOnlineUsers] = useState(1);
   const [isDocReady, setIsDocReady] = useState(false);
+  const { toast } = useToast();
+  
+  const keystrokesRef = useRef(0);
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Persistent refs across file switches — these survive the entire session
   const providerRef = useRef<WebsocketProvider | null>(null);
@@ -107,16 +113,82 @@ const EditorPage = () => {
     provider.awareness.setLocalStateField('currentFile', fileId);
   }, []);
 
+  // ─── Save Checkpoint Helper ────────────────────────────────────────────
+  const saveCheckpoint = useCallback(async (type: 'auto' | 'manual' | 'pre-execution', label?: string) => {
+    if (!docRef.current || !projectId) return;
+    
+    const content = docRef.current.getText(`file:${currentFile}`).toString();
+    const token = localStorage.getItem('token');
+    
+    try {
+      const res = await fetch('/api/checkpoints', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          roomId: projectId,
+          content,
+          type,
+          label,
+          language: getLanguageFromExtension(files.find(f => f.id === currentFile)?.name || 'js')
+        })
+      });
+      
+      if (!res.ok) throw new Error('Failed to save checkpoint');
+      
+      if (type === 'manual') {
+        toast({ title: 'Checkpoint saved', description: label || 'Manual Save' });
+      }
+      
+      // Reset keystrokes after any save
+      keystrokesRef.current = 0;
+    } catch (err) {
+      console.error('Checkpoint error:', err);
+    }
+  }, [currentFile, files, projectId, toast]);
+
   // ─── Initialize Y.Doc, WebSocket, and IndexedDB once on mount ──────────
   useEffect(() => {
+    // Join Socket.io room
+    if (projectId) {
+      socket.emit('join-room', projectId);
+    }
+
+    // Listen for restores
+    const handleRestore = (data: { content: string, label: string, restoredBy: string }) => {
+      if (!docRef.current || !currentFile) return;
+      
+      const yText = docRef.current.getText(`file:${currentFile}`);
+      docRef.current.transact(() => {
+        yText.delete(0, yText.length);
+        yText.insert(0, data.content);
+      });
+
+      toast({
+        title: 'Code restored',
+        description: `Restored to "${data.label}" by ${data.restoredBy}`
+      });
+    };
+
+    socket.on('restore-checkpoint', handleRestore);
+
+    // Setup 2-minute auto-save
+    autoSaveTimerRef.current = setInterval(() => {
+      saveCheckpoint('auto');
+    }, 2 * 60 * 1000);
+
     return () => {
       // Clean up everything on unmount
       bindingRef.current?.destroy();
       providerRef.current?.disconnect();
       indexeddbProviderRef.current?.destroy();
       docRef.current?.destroy();
+      socket.off('restore-checkpoint', handleRestore);
+      if (autoSaveTimerRef.current) clearInterval(autoSaveTimerRef.current);
     };
-  }, []);
+  }, [projectId, currentFile, saveCheckpoint, toast]);
 
   // ─── Re-bind when the selected file changes ────────────────────────────
   useEffect(() => {
@@ -149,10 +221,23 @@ const EditorPage = () => {
     const provider = new WebsocketProvider(wsUrl, roomName, doc);
     providerRef.current = provider;
 
-    // Assign a random color and name for this user
+    // Pull identity from JWT if available
+    const token = localStorage.getItem('token');
+    let myName = `User ${Math.floor(Math.random() * 1000)}`;
+    let myId = Math.random().toString();
+
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        myName = payload.username || myName;
+        myId = payload.userId || myId;
+      } catch (e) {}
+    }
+
+    // Generate deterministic color from myId
     const colors = ['#f87171', '#fb923c', '#fbbf24', '#a3e635', '#4ade80', '#34d399', '#2dd4bf', '#38bdf8', '#818cf8', '#c084fc', '#f472b6'];
-    const myColor = colors[Math.floor(Math.random() * colors.length)];
-    const myName = `User ${Math.floor(Math.random() * 1000)}`;
+    const colorIndex = Math.abs(myId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)) % colors.length;
+    const myColor = colors[colorIndex];
 
     provider.awareness.setLocalStateField('user', {
       name: myName,
@@ -198,6 +283,21 @@ const EditorPage = () => {
     if (initialFile) {
       bindToFile(initialFile);
     }
+
+    // ─── Monaco Actions & Events ─────────────────
+    
+    // Ctrl+S / Cmd+S manual save
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+      saveCheckpoint('manual');
+    });
+
+    // Keystroke counter for auto-save
+    editor.onDidChangeModelContent(() => {
+      keystrokesRef.current += 1;
+      if (keystrokesRef.current >= 50) {
+        saveCheckpoint('auto');
+      }
+    });
   };
 
   // ─── Helpers ─────────────────────────────────────────────────────────────

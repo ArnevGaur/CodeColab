@@ -3,18 +3,21 @@ import { Terminal as TerminalIcon } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useEditorStore } from '@/store/editorStore';
 import * as Y from 'yjs';
+import { useParams } from 'react-router-dom';
 
 interface TerminalProps {
   doc?: Y.Doc | null;
 }
 
 const Terminal = ({ doc }: TerminalProps) => {
+  const { projectId } = useParams();
   const { files, currentFile } = useEditorStore();
   const [history, setHistory] = useState<string[]>([
     'Welcome to CodeColab Terminal',
     'Type "run" to execute your current file, or specify the file: "python main.py", "node index.js"',
   ]);
   const [input, setInput] = useState('');
+  const [isExecuting, setIsExecuting] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -51,52 +54,89 @@ const Terminal = ({ doc }: TerminalProps) => {
         return;
       }
       
-      setHistory((prev) => [...prev, `⚙️ Executing ${fileName}...`]);
-      
-      let codeToExecute = file.content;
-      if (file.id === currentFile && doc) {
-         codeToExecute = doc.getText('monaco').toString();
-      }
-
-      // Map file extension to Piston supported languages
-      const ext = fileName.split('.').pop()?.toLowerCase();
-      let execLang = 'javascript';
-      if (ext === 'py') execLang = 'python';
-      else if (ext === 'cpp' || ext === 'c') execLang = 'cpp';
-      else if (ext === 'java') execLang = 'java';
-      else if (ext === 'ts') execLang = 'typescript';
-      else if (ext === 'cs') execLang = 'csharp';
-
-      fetch('/api/execute', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          // Assuming authorization token exists
-          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
-        },
-        body: JSON.stringify({ language: execLang, content: codeToExecute })
-      })
-      .then(res => res.json())
-      .then((data: any) => {
-        if (data.error) {
-          setHistory((prev) => [...prev, `Error (${data.error}): ${data.stderr ? data.stderr : ''}`]);
-        } else {
-          const outLines = (data.stdout || '').split('\n').filter(Boolean);
-          const errLines = (data.stderr || '').split('\n').filter(Boolean);
-          const compLines = (data.compile_output || '').split('\n').filter(Boolean);
-          
-          setHistory((prev) => [
-            ...prev,
-            ...compLines.map((l: string) => `Compiler: ${l}`),
-            ...outLines,
-            ...errLines.map((e: string) => `Error: ${e}`),
-            `Process exited with code ${data.code !== undefined ? data.code : 'unknown'}`
-          ]);
+      const execute = async () => {
+        setIsExecuting(true);
+        setHistory((prev) => [...prev, `⚙️ Executing ${fileName}...`]);
+        
+        let codeToExecute = file.content;
+        if (file.id === currentFile && doc) {
+          codeToExecute = doc.getText(`file:${currentFile}`).toString();
         }
-      })
-      .catch((err: any) => {
-        setHistory((prev) => [...prev, `Error connecting to execution server: ${err.message}`]);
-      });
+
+        const token = localStorage.getItem('token');
+        
+        // 1. Critical: Save pre-execution checkpoint
+        try {
+          // Decode username from token for the label
+          let username = 'User';
+          if (token) {
+            try {
+              const payload = JSON.parse(atob(token.split('.')[1]));
+              username = payload.username || 'User';
+            } catch (e) {}
+          }
+
+          await fetch('/api/checkpoints', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              roomId: projectId,
+              content: codeToExecute,
+              type: 'pre-execution',
+              label: `Before run by ${username}`
+            })
+          });
+        } catch (e) {
+          console.error('Failed to save pre-execution checkpoint', e);
+        }
+
+        // 2. Execute code
+        const ext = fileName.split('.').pop()?.toLowerCase();
+        let execLang = 'javascript';
+        if (ext === 'py') execLang = 'python';
+        else if (ext === 'cpp' || ext === 'c') execLang = 'cpp';
+        else if (ext === 'java') execLang = 'java';
+        else if (ext === 'ts') execLang = 'typescript';
+        else if (ext === 'cs') execLang = 'csharp';
+
+        try {
+          const res = await fetch('/api/execute', {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ language: execLang, content: codeToExecute })
+          });
+          
+          const data = await res.json();
+          
+          if (data.error) {
+            setHistory((prev) => [...prev, `Error (${data.error}): ${data.stderr ? data.stderr : ''}`]);
+          } else {
+            const outLines = (data.stdout || '').split('\n').filter(Boolean);
+            const errLines = (data.stderr || '').split('\n').filter(Boolean);
+            const compLines = (data.compile_output || '').split('\n').filter(Boolean);
+            
+            setHistory((prev) => [
+              ...prev,
+              ...compLines.map((l: string) => `Compiler: ${l}`),
+              ...outLines,
+              ...errLines.map((e: string) => `Error: ${e}`),
+              `Process exited with code ${data.code !== undefined ? data.code : 'unknown'}`
+            ]);
+          }
+        } catch (err: any) {
+          setHistory((prev) => [...prev, `Error connecting to execution server: ${err.message}`]);
+        } finally {
+          setIsExecuting(false);
+        }
+      };
+
+      execute();
       return;
     }
 
