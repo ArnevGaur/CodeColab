@@ -46,28 +46,31 @@ const Terminal = () => {
         return;
       }
       
-      setHistory((prev) => [...prev, `Executing ${fileName}...`]);
+      setHistory((prev) => [...prev, `⚙️ Executing ${fileName}...`]);
       
-      setTimeout(() => {
-        if (fileName.endsWith('.js') || fileName.endsWith('.ts')) {
-           try {
-              // Extremely basic sandboxed eval for demo purposes
-              const logs: any[] = [];
-              const oldLog = console.log;
-              console.log = (...a) => logs.push(a.join(' '));
-              // Note: using eval directly on typescript will fail if it has type syntax, but it's fine for simple JS mocking
-              const jsCode = file.content.replace(/import .*;|export .*/g, '');
-              new Function(jsCode)();
-              console.log = oldLog;
-              setHistory((prev) => [...prev, ...logs, 'Process exited with code 0.']);
-           } catch (e: any) {
-              setHistory((prev) => [...prev, `Error: ${e.message}`, 'Process exited with code 1.']);
-           }
+      fetch('/api/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileName: file.name, content: file.content })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.error && !data.output) {
+          setHistory((prev) => [...prev, `Error: ${data.error}`]);
         } else {
-           // Mocking for non-JS languages since we have no WebContainers backend right now
-           setHistory((prev) => [...prev, `[Server: ${command} compiler invoked]`, 'Hello World!', 'Process exited with code 0.']);
+          // Break output into lines for distinct rendering
+          const lines = (data.output || '').split('\n').filter(Boolean);
+          if (data.error) {
+             const errLines = data.error.split('\n').filter(Boolean);
+             setHistory((prev) => [...prev, ...lines, ...errLines.map((e: string) => `Error: ${e}`), 'Process exited with code 1.']);
+          } else {
+             setHistory((prev) => [...prev, ...lines, 'Process exited with code 0.']);
+          }
         }
-      }, 600);
+      })
+      .catch(err => {
+        setHistory((prev) => [...prev, `Error connecting to execution server: ${err.message}`]);
+      });
       return;
     }
 
