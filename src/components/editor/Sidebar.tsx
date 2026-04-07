@@ -35,9 +35,23 @@ const Sidebar = ({ doc }: SidebarProps) => {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => setLeftSidebarTab(tab.id)}
+                onClick={() => {
+                  const isCurrentlyActive = leftSidebarTab === tab.id;
+                  const { leftSidebarOpen, toggleLeftSidebar } = useEditorStore.getState();
+                  
+                  if (isCurrentlyActive && leftSidebarOpen) {
+                    toggleLeftSidebar();
+                  } else {
+                    setLeftSidebarTab(tab.id);
+                    if (!leftSidebarOpen) {
+                      toggleLeftSidebar();
+                    }
+                  }
+                }}
                 className={`w-10 h-10 ${
-                  leftSidebarTab === tab.id ? 'bg-muted text-primary' : 'text-muted-foreground'
+                  leftSidebarTab === tab.id
+                    ? 'bg-primary/20 text-primary'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                 }`}
                 title={tab.label}
               >
@@ -48,7 +62,7 @@ const Sidebar = ({ doc }: SidebarProps) => {
         })}
       </div>
 
-      <div className="w-56 h-full">
+      <div className="flex-1 h-full min-w-0 flex flex-col">
         {leftSidebarTab === 'files' && <FileExplorer doc={doc} />}
         {leftSidebarTab === 'history' && <HistoryPanel doc={doc} />}
         {leftSidebarTab === 'chat' && (

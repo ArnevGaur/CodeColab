@@ -59,9 +59,19 @@ const AIChat = ({ doc }: AIChatProps) => {
 
   return (
     <div className="h-full bg-surface border-l border-border flex flex-col">
-      <div className="p-3 border-b border-border flex items-center gap-2">
-        <Sparkles className="w-4 h-4 text-primary" />
-        <span className="text-sm font-medium text-foreground">AI Assistant & Chat</span>
+      <div className="p-3 border-b border-border flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-primary" />
+          <span className="text-sm font-medium text-foreground">AI Assistant & Chat</span>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => useEditorStore.getState().toggleRightSidebar()}
+          className="h-6 w-6 p-0 hover:bg-muted"
+        >
+          <span className="text-xs">&times;</span>
+        </Button>
       </div>
 
       <div className="p-3 border-b border-border">

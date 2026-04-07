@@ -6,6 +6,7 @@ import { useEditorStore } from '@/store/editorStore';
 import { Button } from '@/components/ui/button';
 import TopBar from '@/components/editor/TopBar';
 import Sidebar from '@/components/editor/Sidebar';
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 import AIChat from '@/components/editor/AIChat';
 import Terminal from '@/components/editor/Terminal';
 import * as Y from 'yjs';
@@ -93,55 +94,58 @@ const EditorPage = () => {
   };
 
   const currentFileName = files.find((f) => f.id === currentFile)?.name || 'Untitled';
-  const language = currentFileName.endsWith('.tsx') || currentFileName.endsWith('.ts')
-    ? 'typescript'
-    : currentFileName.endsWith('.md')
-    ? 'markdown'
-    : 'plaintext';
+  
+  const getLanguageFromExtension = (filename: string) => {
+    const ext = filename.split('.').pop()?.toLowerCase();
+    switch (ext) {
+      case 'ts': case 'tsx': return 'typescript';
+      case 'js': case 'jsx': return 'javascript';
+      case 'py': return 'python';
+      case 'go': return 'go';
+      case 'java': return 'java';
+      case 'c': case 'cpp': case 'h': case 'hpp': return 'cpp';
+      case 'cs': return 'csharp';
+      case 'html': return 'html';
+      case 'css': return 'css';
+      case 'json': return 'json';
+      case 'md': return 'markdown';
+      case 'sql': return 'sql';
+      case 'sh': case 'bash': return 'shell';
+      default: return 'plaintext';
+    }
+  };
+  const language = getLanguageFromExtension(currentFileName);
 
   return (
     <div className="h-screen flex flex-col bg-background">
       <TopBar />
 
-      <div className="flex-1 flex overflow-hidden">
+      <ResizablePanelGroup direction="horizontal" className="flex-1 overflow-hidden">
         {/* Left Sidebar Toggle */}
         {!leftSidebarOpen && (
           <Button
             variant="ghost"
             size="icon"
             onClick={toggleLeftSidebar}
-            className="absolute left-0 top-20 z-10 bg-surface border border-border hover:bg-muted"
+            className="absolute left-0 top-20 z-10 bg-surface border-r border-y border-border hover:bg-muted shadow-sm w-6 h-8 rounded-l-none"
           >
-            <ChevronRight className="w-4 h-4" />
+            <ChevronRight className="w-3 h-3" />
           </Button>
         )}
 
         {/* Left Sidebar */}
-        <AnimatePresence initial={false}>
-          {leftSidebarOpen && (
-            <motion.div
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 'auto', opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
-              transition={{ duration: 0.3, ease: 'easeInOut' }}
-              className="relative overflow-hidden"
-            >
+        {leftSidebarOpen && (
+          <>
+            <ResizablePanel defaultSize={20} minSize={10} maxSize={40} className="relative bg-surface flex flex-col">
               <Sidebar doc={docRef.current} />
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={toggleLeftSidebar}
-                className="absolute -right-3 top-4 z-10 bg-surface border border-border hover:bg-muted"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            </ResizablePanel>
+            <ResizableHandle className="w-1 bg-border hover:bg-primary/50 transition-colors" />
+          </>
+        )}
 
         {/* Editor */}
-        <div className="flex-1 flex flex-col">
-          <div className="flex-1 overflow-hidden">
+        <ResizablePanel defaultSize={60} minSize={30} className="flex flex-col">
+          <div className="flex-1 overflow-hidden relative">
             <Editor
               height="100%"
               language={language}
@@ -196,7 +200,7 @@ const EditorPage = () => {
               </div>
             </div>
           )}
-        </div>
+        </ResizablePanel>
 
         {/* Right Sidebar Toggle */}
         {!rightSidebarOpen && (
@@ -204,37 +208,24 @@ const EditorPage = () => {
             variant="ghost"
             size="icon"
             onClick={toggleRightSidebar}
-            className="absolute right-0 top-20 z-10 bg-surface border border-border hover:bg-muted"
+            className="absolute right-0 top-20 z-10 bg-surface border-l border-y border-border hover:bg-muted shadow-sm w-6 h-8 rounded-r-none"
           >
-            <ChevronLeft className="w-4 h-4" />
+            <ChevronLeft className="w-3 h-3" />
           </Button>
         )}
 
         {/* Right Sidebar */}
-        <AnimatePresence initial={false}>
-          {rightSidebarOpen && (
-            <motion.div
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 'auto', opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
-              transition={{ duration: 0.3, ease: 'easeInOut' }}
-              className="relative overflow-hidden"
-            >
-              <div className="w-80 h-full">
+        {rightSidebarOpen && (
+          <>
+            <ResizableHandle className="w-1 bg-border hover:bg-primary/50 transition-colors" />
+            <ResizablePanel defaultSize={20} minSize={15} maxSize={40} className="relative bg-surface flex flex-col">
+              <div className="w-full h-full">
                 <AIChat doc={docRef.current} />
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={toggleRightSidebar}
-                className="absolute -left-3 top-4 z-10 bg-surface border border-border hover:bg-muted"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+            </ResizablePanel>
+          </>
+        )}
+      </ResizablePanelGroup>
     </div>
   );
 };

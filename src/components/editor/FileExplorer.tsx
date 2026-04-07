@@ -11,6 +11,8 @@ interface FileExplorerProps {
 const FileExplorer = ({ doc }: FileExplorerProps) => {
   const { files, currentFile, setCurrentFile, addFile } = useEditorStore();
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  const [isCreating, setIsCreating] = useState(false);
+  const [newFileName, setNewFileName] = useState('');
 
   const toggleFolder = (folderId: string) => {
     const newExpanded = new Set(expandedFolders);
@@ -21,6 +23,7 @@ const FileExplorer = ({ doc }: FileExplorerProps) => {
     }
     setExpandedFolders(newExpanded);
   };
+  
   useEffect(() => {
     if (!doc) return;
     const fileMap = doc.getMap('files');
@@ -36,13 +39,19 @@ const FileExplorer = ({ doc }: FileExplorerProps) => {
     return () => fileMap.unobserve(observer);
   }, [doc]);
 
-  const handleNewFile = () => {
+  const handleCreateFile = () => {
+    if (!newFileName.trim()) {
+      setIsCreating(false);
+      setNewFileName('');
+      return;
+    }
+    
     if (!doc) return;
     const newFile = {
       id: `file-${Date.now()}`,
-      name: `untitled-${Math.floor(Math.random() * 100)}.tsx`,
+      name: newFileName.trim(),
       type: 'file' as const,
-      content: '// New file\n',
+      content: '// Start coding here\n',
     };
     
     // Broadcast creation to everyone using Yjs
@@ -52,6 +61,8 @@ const FileExplorer = ({ doc }: FileExplorerProps) => {
     // Local fallback
     addFile(newFile);
     setCurrentFile(newFile.id);
+    setIsCreating(false);
+    setNewFileName('');
   };
 
   return (
@@ -61,7 +72,7 @@ const FileExplorer = ({ doc }: FileExplorerProps) => {
         <Button
           variant="ghost"
           size="sm"
-          onClick={handleNewFile}
+          onClick={() => setIsCreating(true)}
           className="h-6 w-6 p-0 hover:bg-muted"
         >
           <Plus className="w-4 h-4" />
@@ -69,6 +80,32 @@ const FileExplorer = ({ doc }: FileExplorerProps) => {
       </div>
 
       <div className="flex-1 overflow-auto p-2">
+        {isCreating && (
+          <div className="flex items-center gap-2 w-full px-2 py-1 mb-1">
+            <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
+            <input
+              autoFocus
+              type="text"
+              value={newFileName}
+              onChange={(e) => setNewFileName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleCreateFile();
+                if (e.key === 'Escape') {
+                  setIsCreating(false);
+                  setNewFileName('');
+                }
+              }}
+              onBlur={() => {
+                if (!newFileName.trim()) {
+                  setIsCreating(false);
+                  setNewFileName('');
+                }
+              }}
+              placeholder="filename.ext"
+              className="bg-background text-sm text-foreground outline-none border border-primary/50 w-full rounded px-1 min-w-0"
+            />
+          </div>
+        )}
         {files.map((file) => (
           <div key={file.id}>
             {file.type === 'folder' ? (
