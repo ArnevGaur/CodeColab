@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 export interface Collaborator {
   id: string;
@@ -48,7 +49,9 @@ interface EditorState {
   setRole: (role: 'owner' | 'editor' | 'viewer') => void;
 }
 
-export const useEditorStore = create<EditorState>((set) => ({
+export const useEditorStore = create<EditorState>()(
+  persist(
+    (set) => ({
   currentFile: 'readme',
   files: [
     {
@@ -103,4 +106,9 @@ Happy coding! 💻
   toggleRightSidebar: () => set((state) => ({ rightSidebarOpen: !state.rightSidebarOpen })),
   setLeftSidebarTab: (tab) => set({ leftSidebarTab: tab }),
   setRole: (role) => set({ role }),
-}));
+    }),
+    {
+      name: 'editor-storage',
+    }
+  )
+);

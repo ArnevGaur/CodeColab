@@ -12,6 +12,7 @@ import Terminal from '@/components/editor/Terminal';
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
 import { MonacoBinding } from 'y-monaco';
+import { IndexeddbPersistence } from 'y-indexeddb';
 import { useParams } from 'react-router-dom';
 
 const EditorPage = () => {
@@ -34,12 +35,14 @@ const EditorPage = () => {
   const providerRef = useRef<WebsocketProvider | null>(null);
   const bindingRef = useRef<any>(null);
   const docRef = useRef<Y.Doc | null>(null);
+  const indexeddbProviderRef = useRef<IndexeddbPersistence | null>(null);
 
   useEffect(() => {
     return () => {
       // Clean up WebSocket connection and CRDT listeners on unmount
       bindingRef.current?.destroy();
       providerRef.current?.disconnect();
+      indexeddbProviderRef.current?.destroy();
       docRef.current?.destroy();
     };
   }, []);
@@ -47,9 +50,17 @@ const EditorPage = () => {
   const handleEditorMount = (editor: any, monaco: any) => {
     const doc = new Y.Doc();
     docRef.current = doc;
-    setIsDocReady(true);
 
     const roomName = `codecolab-room-${projectId || 'demo'}`;
+    
+    // Setup local indexed-db persistence
+    const indexeddbProvider = new IndexeddbPersistence(roomName, doc);
+    indexeddbProviderRef.current = indexeddbProvider;
+    
+    indexeddbProvider.on('synced', () => {
+      setIsDocReady(true);
+    });
+
     // Using demo Yjs signaling server for real-time WebSockets
     const provider = new WebsocketProvider('wss://demos.yjs.dev/ws', roomName, doc);
     providerRef.current = provider;
