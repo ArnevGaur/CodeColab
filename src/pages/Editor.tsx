@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import Editor from '@monaco-editor/react';
 import { ChevronLeft, ChevronRight, ChevronUp } from 'lucide-react';
 import { useEditorStore } from '@/store/editorStore';
@@ -7,8 +8,13 @@ import TopBar from '@/components/editor/TopBar';
 import Sidebar from '@/components/editor/Sidebar';
 import AIChat from '@/components/editor/AIChat';
 import Terminal from '@/components/editor/Terminal';
+import * as Y from 'yjs';
+import { WebsocketProvider } from 'y-websocket';
+import { MonacoBinding } from 'y-monaco';
+import { useParams } from 'react-router-dom';
 
 const EditorPage = () => {
+  const { projectId } = useParams();
   const {
     currentFile,
     files,
@@ -21,20 +27,42 @@ const EditorPage = () => {
     toggleRightSidebar,
   } = useEditorStore();
 
-  const [editorValue, setEditorValue] = useState('');
+  const [onlineUsers, setOnlineUsers] = useState(1);
+  const providerRef = useRef<WebsocketProvider | null>(null);
+  const bindingRef = useRef<any>(null);
+  const docRef = useRef<Y.Doc | null>(null);
 
   useEffect(() => {
-    const file = files.find((f) => f.id === currentFile);
-    if (file?.content) {
-      setEditorValue(file.content);
-    }
-  }, [currentFile, files]);
+    return () => {
+      // Clean up WebSocket connection and CRDT listeners on unmount
+      bindingRef.current?.destroy();
+      providerRef.current?.disconnect();
+      docRef.current?.destroy();
+    };
+  }, []);
 
-  const handleEditorChange = (value: string | undefined) => {
-    if (value !== undefined && currentFile) {
-      setEditorValue(value);
-      updateFileContent(currentFile, value);
-    }
+  const handleEditorMount = (editor: any, monaco: any) => {
+    const doc = new Y.Doc();
+    docRef.current = doc;
+
+    const roomName = `codecolab-room-${projectId || 'demo'}`;
+    // Using demo Yjs signaling server for real-time WebSockets
+    const provider = new WebsocketProvider('wss://demos.yjs.dev/ws', roomName, doc);
+    providerRef.current = provider;
+
+    provider.awareness.on('change', () => {
+      setOnlineUsers(provider.awareness.getStates().size);
+    });
+
+    const type = doc.getText('monaco');
+    const binding = new MonacoBinding(type, editor.getModel(), new Set([editor]), provider.awareness);
+    bindingRef.current = binding;
+
+    const colors = ['#f87171', '#fb923c', '#fbbf24', '#a3e635', '#4ade80', '#34d399', '#2dd4bf'];
+    provider.awareness.setLocalStateField('user', {
+      name: `Anon ${Math.floor(Math.random() * 100)}`,
+      color: colors[Math.floor(Math.random() * colors.length)]
+    });
   };
 
   const currentFileName = files.find((f) => f.id === currentFile)?.name || 'Untitled';
@@ -62,19 +90,27 @@ const EditorPage = () => {
         )}
 
         {/* Left Sidebar */}
-        {leftSidebarOpen && (
-          <div className="relative">
-            <Sidebar />
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleLeftSidebar}
-              className="absolute -right-3 top-4 z-10 bg-surface border border-border hover:bg-muted"
+        <AnimatePresence initial={false}>
+          {leftSidebarOpen && (
+            <motion.div
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: 'auto', opacity: 1 }}
+              exit={{ width: 0, opacity: 0 }}
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
+              className="relative overflow-hidden"
             >
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-          </div>
-        )}
+              <Sidebar />
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleLeftSidebar}
+                className="absolute -right-3 top-4 z-10 bg-surface border border-border hover:bg-muted"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Editor */}
         <div className="flex-1 flex flex-col">
@@ -82,8 +118,7 @@ const EditorPage = () => {
             <Editor
               height="100%"
               language={language}
-              value={editorValue}
-              onChange={handleEditorChange}
+              onMount={handleEditorMount}
               theme="vs-dark"
               options={{
                 minimap: { enabled: true },
@@ -125,7 +160,7 @@ const EditorPage = () => {
                   <span className="w-2 h-2 rounded-full bg-success"></span>
                   Connected
                 </span>
-                <span>👥 3 collaborators online</span>
+                <span>👥 {onlineUsers} collaborator{onlineUsers !== 1 ? 's' : ''} online</span>
               </div>
               <div className="flex items-center gap-4 text-xs text-muted-foreground">
                 <span>TypeScript</span>
@@ -148,19 +183,29 @@ const EditorPage = () => {
         )}
 
         {/* Right Sidebar */}
-        {rightSidebarOpen && (
-          <div className="w-80 relative">
-            <AIChat />
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleRightSidebar}
-              className="absolute -left-3 top-4 z-10 bg-surface border border-border hover:bg-muted"
+        <AnimatePresence initial={false}>
+          {rightSidebarOpen && (
+            <motion.div
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: 'auto', opacity: 1 }}
+              exit={{ width: 0, opacity: 0 }}
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
+              className="relative overflow-hidden"
             >
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-          </div>
-        )}
+              <div className="w-80 h-full">
+                <AIChat />
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleRightSidebar}
+                className="absolute -left-3 top-4 z-10 bg-surface border border-border hover:bg-muted"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

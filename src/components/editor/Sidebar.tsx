@@ -1,4 +1,5 @@
 import { FileText, MessageSquare, Sparkles, Settings } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { useEditorStore } from '@/store/editorStore';
 import { Button } from '@/components/ui/button';
 import FileExplorer from './FileExplorer';
@@ -19,18 +20,23 @@ const Sidebar = () => {
         {tabs.map((tab) => {
           const Icon = tab.icon;
           return (
-            <Button
+            <motion.div
               key={tab.id}
-              variant="ghost"
-              size="icon"
-              onClick={() => setLeftSidebarTab(tab.id)}
-              className={`w-10 h-10 ${
-                leftSidebarTab === tab.id ? 'bg-muted text-primary' : 'text-muted-foreground'
-              }`}
-              title={tab.label}
+              whileHover={{ scale: 1.15 }}
+              whileTap={{ scale: 0.9 }}
             >
-              <Icon className="w-5 h-5" />
-            </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setLeftSidebarTab(tab.id)}
+                className={`w-10 h-10 ${
+                  leftSidebarTab === tab.id ? 'bg-muted text-primary' : 'text-muted-foreground'
+                }`}
+                title={tab.label}
+              >
+                <Icon className="w-5 h-5" />
+              </Button>
+            </motion.div>
           );
         })}
       </div>

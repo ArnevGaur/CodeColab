@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Share2, Users } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useEditorStore } from '@/store/editorStore';
 import { Button } from '@/components/ui/button';
 import ShareModal from './ShareModal';
@@ -33,14 +34,16 @@ const TopBar = () => {
             </div>
           </div>
 
-          <Button
-            onClick={() => setShowShareModal(true)}
-            size="sm"
-            className="bg-gradient-primary hover:bg-gradient-hover"
-          >
-            <Share2 className="w-4 h-4 mr-2" />
-            Share
-          </Button>
+          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+            <Button
+              onClick={() => setShowShareModal(true)}
+              size="sm"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-glow border border-primary/20 relative overflow-hidden"
+            >
+              <Share2 className="w-4 h-4 mr-2" />
+              Share
+            </Button>
+          </motion.div>
         </div>
       </div>
 

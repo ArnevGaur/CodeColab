@@ -72,11 +72,7 @@ Happy coding! 💻
 `,
     },
   ],
-  collaborators: [
-    { id: '1', name: 'You', color: 'hsl(var(--collaborator-3))', cursor: null },
-    { id: '2', name: 'Arnev', color: 'hsl(var(--collaborator-1))', cursor: { line: 12, col: 15 } },
-    { id: '3', name: 'Priya', color: 'hsl(var(--collaborator-2))', cursor: { line: 8, col: 22 } },
-  ],
+  collaborators: [],
   chatMessages: [
     {
       id: '1',
