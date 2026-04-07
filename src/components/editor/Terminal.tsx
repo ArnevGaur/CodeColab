@@ -2,8 +2,13 @@ import { useState, useRef, useEffect } from 'react';
 import { Terminal as TerminalIcon } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useEditorStore } from '@/store/editorStore';
+import * as Y from 'yjs';
 
-const Terminal = () => {
+interface TerminalProps {
+  doc?: Y.Doc | null;
+}
+
+const Terminal = ({ doc }: TerminalProps) => {
   const { files, currentFile } = useEditorStore();
   const [history, setHistory] = useState<string[]>([
     'Welcome to CodeColab Terminal',
@@ -48,10 +53,15 @@ const Terminal = () => {
       
       setHistory((prev) => [...prev, `⚙️ Executing ${fileName}...`]);
       
+      let codeToExecute = file.content;
+      if (file.id === currentFile && doc) {
+         codeToExecute = doc.getText('monaco').toString();
+      }
+
       fetch('/api/execute', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fileName: file.name, content: file.content })
+        body: JSON.stringify({ fileName: file.name, content: codeToExecute })
       })
       .then(res => res.json())
       .then(data => {

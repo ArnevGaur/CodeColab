@@ -47,11 +47,23 @@ const FileExplorer = ({ doc }: FileExplorerProps) => {
     }
     
     if (!doc) return;
+    
+    // Determine comment syntax based on language extension
+    const ext = newFileName.split('.').pop()?.toLowerCase();
+    let defaultContent = '// Start coding here\n';
+    if (ext === 'py' || ext === 'sh' || ext === 'rb' || ext === 'yaml' || ext === 'yml') {
+      defaultContent = '# Start coding here\n';
+    } else if (ext === 'html' || ext === 'xml') {
+      defaultContent = '<!-- Start coding here -->\n';
+    } else if (ext === 'css') {
+      defaultContent = '/* Start coding here */\n';
+    }
+
     const newFile = {
       id: `file-${Date.now()}`,
       name: newFileName.trim(),
       type: 'file' as const,
-      content: '// Start coding here\n',
+      content: defaultContent,
     };
     
     // Broadcast creation to everyone using Yjs

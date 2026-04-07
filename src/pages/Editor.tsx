@@ -30,6 +30,7 @@ const EditorPage = () => {
   } = useEditorStore();
 
   const [onlineUsers, setOnlineUsers] = useState(1);
+  const [isDocReady, setIsDocReady] = useState(false);
   const providerRef = useRef<WebsocketProvider | null>(null);
   const bindingRef = useRef<any>(null);
   const docRef = useRef<Y.Doc | null>(null);
@@ -46,6 +47,7 @@ const EditorPage = () => {
   const handleEditorMount = (editor: any, monaco: any) => {
     const doc = new Y.Doc();
     docRef.current = doc;
+    setIsDocReady(true);
 
     const roomName = `codecolab-room-${projectId || 'demo'}`;
     // Using demo Yjs signaling server for real-time WebSockets
@@ -167,7 +169,7 @@ const EditorPage = () => {
           {/* Terminal */}
           {terminalOpen && (
             <div className="h-48 relative">
-              <Terminal />
+              <Terminal doc={docRef.current} />
               <Button
                 variant="ghost"
                 size="icon"
