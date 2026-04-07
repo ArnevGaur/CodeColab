@@ -1,43 +1,52 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Send, Sparkles } from 'lucide-react';
-import { useEditorStore } from '@/store/editorStore';
+import { useEditorStore, ChatMessage } from '@/store/editorStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import * as Y from 'yjs';
 
-const AIChat = () => {
-  const { chatMessages, addChatMessage } = useEditorStore();
+interface AIChatProps {
+  doc: Y.Doc | null;
+}
+
+const AIChat = ({ doc }: AIChatProps) => {
+  const { chatMessages, setChatMessages } = useEditorStore();
   const [message, setMessage] = useState('');
 
-  const handleSend = () => {
-    if (!message.trim()) return;
+  useEffect(() => {
+    if (!doc) return;
+    const chatArray = doc.getArray<ChatMessage>('chat');
+    
+    // Initial load
+    setChatMessages(chatArray.toArray());
 
-    addChatMessage({
+    // Observe changes from websockets
+    const observer = () => {
+      setChatMessages(chatArray.toArray());
+    };
+    
+    chatArray.observe(observer);
+    return () => chatArray.unobserve(observer);
+  }, [doc, setChatMessages]);
+
+  const handleSend = () => {
+    if (!message.trim() || !doc) return;
+
+    const chatArray = doc.getArray<ChatMessage>('chat');
+    
+    const newMessage: ChatMessage = {
       id: Date.now().toString(),
-      user: 'You',
+      user: 'You', // In a real app we'd use the user's login name, for anon we just say You locally but we should really sync the awareness name.
       message,
       timestamp: new Date().toLocaleTimeString('en-US', {
         hour: 'numeric',
         minute: '2-digit',
         hour12: true,
       }),
-    });
+    };
 
-    // Mock AI response
-    setTimeout(() => {
-      addChatMessage({
-        id: (Date.now() + 1).toString(),
-        user: 'AI',
-        message: "I'd be happy to help! Could you provide more details about what you're working on?",
-        timestamp: new Date().toLocaleTimeString('en-US', {
-          hour: 'numeric',
-          minute: '2-digit',
-          hour12: true,
-        }),
-        isAI: true,
-      });
-    }, 1000);
-
+    chatArray.push([newMessage]);
     setMessage('');
   };
 

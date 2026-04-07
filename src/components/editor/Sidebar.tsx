@@ -3,8 +3,13 @@ import { motion } from 'framer-motion';
 import { useEditorStore } from '@/store/editorStore';
 import { Button } from '@/components/ui/button';
 import FileExplorer from './FileExplorer';
+import * as Y from 'yjs';
 
-const Sidebar = () => {
+interface SidebarProps {
+  doc: Y.Doc | null;
+}
+
+const Sidebar = ({ doc }: SidebarProps) => {
   const { leftSidebarTab, setLeftSidebarTab } = useEditorStore();
 
   const tabs = [
@@ -42,7 +47,7 @@ const Sidebar = () => {
       </div>
 
       <div className="w-56 h-full">
-        {leftSidebarTab === 'files' && <FileExplorer />}
+        {leftSidebarTab === 'files' && <FileExplorer doc={doc} />}
         {leftSidebarTab === 'chat' && (
           <div className="h-full bg-surface border-r border-border p-4">
             <p className="text-sm text-muted-foreground">Team chat coming soon...</p>

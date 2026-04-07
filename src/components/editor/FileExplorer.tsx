@@ -1,9 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FileText, Folder, ChevronRight, ChevronDown, Plus } from 'lucide-react';
 import { useEditorStore } from '@/store/editorStore';
 import { Button } from '@/components/ui/button';
+import * as Y from 'yjs';
 
-const FileExplorer = () => {
+interface FileExplorerProps {
+  doc: Y.Doc | null;
+}
+
+const FileExplorer = ({ doc }: FileExplorerProps) => {
   const { files, currentFile, setCurrentFile, addFile } = useEditorStore();
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
 
@@ -16,14 +21,35 @@ const FileExplorer = () => {
     }
     setExpandedFolders(newExpanded);
   };
+  useEffect(() => {
+    if (!doc) return;
+    const fileMap = doc.getMap('files');
+    
+    // Observe file creations from others
+    const observer = () => {
+      const filesArray = Array.from(fileMap.values()) as any[];
+      if (filesArray.length > 0) {
+        useEditorStore.setState({ files: filesArray });
+      }
+    };
+    fileMap.observe(observer);
+    return () => fileMap.unobserve(observer);
+  }, [doc]);
 
   const handleNewFile = () => {
+    if (!doc) return;
     const newFile = {
       id: `file-${Date.now()}`,
-      name: 'untitled.tsx',
+      name: `untitled-${Math.floor(Math.random() * 100)}.tsx`,
       type: 'file' as const,
       content: '// New file\n',
     };
+    
+    // Broadcast creation to everyone using Yjs
+    const fileMap = doc.getMap('files');
+    fileMap.set(newFile.id, newFile);
+    
+    // Local fallback
     addFile(newFile);
     setCurrentFile(newFile.id);
   };

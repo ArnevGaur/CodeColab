@@ -99,7 +99,7 @@ const EditorPage = () => {
               transition={{ duration: 0.3, ease: 'easeInOut' }}
               className="relative overflow-hidden"
             >
-              <Sidebar />
+              <Sidebar doc={docRef.current} />
               <Button
                 variant="ghost"
                 size="icon"
@@ -193,7 +193,7 @@ const EditorPage = () => {
               className="relative overflow-hidden"
             >
               <div className="w-80 h-full">
-                <AIChat />
+                <AIChat doc={docRef.current} />
               </div>
               <Button
                 variant="ghost"

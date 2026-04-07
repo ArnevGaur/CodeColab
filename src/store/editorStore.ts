@@ -41,6 +41,7 @@ interface EditorState {
   toggleLeftSidebar: () => void;
   toggleRightSidebar: () => void;
   setLeftSidebarTab: (tab: 'files' | 'chat' | 'ai' | 'settings') => void;
+  setChatMessages: (messages: ChatMessage[]) => void;
 }
 
 export const useEditorStore = create<EditorState>((set) => ({
@@ -73,27 +74,7 @@ Happy coding! 💻
     },
   ],
   collaborators: [],
-  chatMessages: [
-    {
-      id: '1',
-      user: 'You',
-      message: 'Can you help optimize this function?',
-      timestamp: '2:34 PM',
-    },
-    {
-      id: '2',
-      user: 'AI',
-      message: 'Of course! I can help optimize your code. Could you share which function you\'d like me to review?',
-      timestamp: '2:34 PM',
-      isAI: true,
-    },
-    {
-      id: '3',
-      user: 'Arnev',
-      message: 'I\'ve pushed the latest changes to the main branch',
-      timestamp: '2:35 PM',
-    },
-  ],
+  chatMessages: [],
   terminalOpen: false,
   leftSidebarOpen: true,
   rightSidebarOpen: true,
@@ -109,6 +90,7 @@ Happy coding! 💻
     })),
   addChatMessage: (message) =>
     set((state) => ({ chatMessages: [...state.chatMessages, message] })),
+  setChatMessages: (messages) => set({ chatMessages: messages }),
   toggleTerminal: () => set((state) => ({ terminalOpen: !state.terminalOpen })),
   toggleLeftSidebar: () => set((state) => ({ leftSidebarOpen: !state.leftSidebarOpen })),
   toggleRightSidebar: () => set((state) => ({ rightSidebarOpen: !state.rightSidebarOpen })),
