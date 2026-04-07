@@ -18,8 +18,8 @@ wss.on('connection', setupWSConnection);
 
 server.on('upgrade', (request, socket, head) => {
   // Handle websocket upgrade, optionally verify JWT role here
-  // For now, accept all upgrades to /ws
-  if (request.url.startsWith('/ws')) {
+  // For now, accept all upgrades to /yjs-websocket
+  if (request.url.startsWith('/yjs-websocket')) {
     wss.handleUpgrade(request, socket, head, (ws) => {
       wss.emit('connection', ws, request);
     });
@@ -55,7 +55,7 @@ async function startServer() {
     await mongoose.connect(mongoUri);
     console.log(`Connected to memory MongoDB: ${mongoUri}`);
 
-    const PORT = process.env.PORT || 5000;
+    const PORT = process.env.PORT || 5005;
     server.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
     });

@@ -61,10 +61,10 @@ const EditorPage = () => {
       setIsDocReady(true);
     });
 
-    // Using our newly built local generic WebSocket backend proxy matching '/ws'
+    // Using our newly built local generic WebSocket backend proxy matching '/yjs-websocket'
     const wsUrl = window.location.protocol === 'https:' 
-      ? `wss://${window.location.host}/ws` 
-      : `ws://${window.location.host}/ws`;
+      ? `wss://${window.location.host}/yjs-websocket` 
+      : `ws://${window.location.host}/yjs-websocket`;
     const provider = new WebsocketProvider(wsUrl, roomName, doc);
     providerRef.current = provider;
 

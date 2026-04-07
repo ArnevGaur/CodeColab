@@ -67,11 +67,11 @@ export default defineConfig(({ mode }) => ({
     port: 8080,
     proxy: {
       '/api': {
-        target: 'http://localhost:5000',
+        target: 'http://localhost:5005',
         changeOrigin: true
       },
-      '/ws': {
-        target: 'ws://localhost:5000',
+      '/yjs-websocket': {
+        target: 'ws://localhost:5005',
         ws: true
       }
     }

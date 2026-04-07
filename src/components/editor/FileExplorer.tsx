@@ -28,11 +28,17 @@ const FileExplorer = ({ doc }: FileExplorerProps) => {
     if (!doc) return;
     const fileMap = doc.getMap('files');
     
+    // Sync initial state immediately for late joiners
+    const filesArray = Array.from(fileMap.values()) as any[];
+    if (filesArray.length > 0) {
+      useEditorStore.setState({ files: filesArray });
+    }
+    
     // Observe file creations from others
     const observer = () => {
-      const filesArray = Array.from(fileMap.values()) as any[];
-      if (filesArray.length > 0) {
-        useEditorStore.setState({ files: filesArray });
+      const updatedFilesArray = Array.from(fileMap.values()) as any[];
+      if (updatedFilesArray.length > 0) {
+        useEditorStore.setState({ files: updatedFilesArray });
       }
     };
     fileMap.observe(observer);
