@@ -7,6 +7,8 @@ const User = require('../models/User');
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key-123';
 const REFRESH_SECRET = process.env.REFRESH_SECRET || 'dev-refresh-key-456';
 
+console.log(`[Diagnostic] Auth Module - JWT Secret Length: ${JWT_SECRET.length}, Prefix: ${JWT_SECRET.substring(0, 3)}`);
+
 // Register
 router.post('/register', async (req, res) => {
   try {

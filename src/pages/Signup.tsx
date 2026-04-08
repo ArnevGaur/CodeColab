@@ -16,7 +16,7 @@ const Signup = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password !== confirmPassword) {
       toast({
@@ -34,11 +34,37 @@ const Signup = () => {
       });
       return;
     }
-    toast({
-      title: 'Account created!',
-      description: 'Welcome to CodeMate.',
-    });
-    navigate('/dashboard');
+
+    try {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email, 
+          username: name, // Using the "name" field as the username
+          password 
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Registration failed');
+      }
+
+      toast({
+        title: 'Account created!',
+        description: 'Please log in with your new credentials.',
+      });
+      
+      navigate('/login');
+    } catch (err: any) {
+      toast({
+        title: 'Signup failed',
+        description: err.message,
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleOAuth = (provider: string) => {

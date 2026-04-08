@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Share2, Users, Circle } from 'lucide-react';
+import { Share2, Users, Circle, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { useEditorStore } from '@/store/editorStore';
 import { Button } from '@/components/ui/button';
 import ShareModal from './ShareModal';
@@ -11,8 +12,15 @@ import {
 } from '@/components/ui/tooltip';
 
 const TopBar = () => {
+  const navigate = useNavigate();
   const [showShareModal, setShowShareModal] = useState(false);
   const { role, setRole, onlineUsers, files } = useEditorStore();
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.location.href = '/login'; // Force full refresh to clear all states
+  };
 
   // Helper: get a file name from its ID
   const getFileName = (fileId?: string) => {
@@ -75,16 +83,33 @@ const TopBar = () => {
           </div>
 
           {/* Share button */}
-          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
             <Button
               onClick={() => setShowShareModal(true)}
               size="sm"
-              className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-glow border border-primary/20 relative overflow-hidden"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm px-4"
             >
               <Share2 className="w-4 h-4 mr-2" />
               Share
             </Button>
           </motion.div>
+
+          {/* Logout button */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleLogout}
+                className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="text-xs">
+              Log Out
+            </TooltipContent>
+          </Tooltip>
         </div>
       </div>
 

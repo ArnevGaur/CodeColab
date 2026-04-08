@@ -12,14 +12,38 @@ const Login = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Mock login
-    toast({
-      title: 'Welcome back!',
-      description: 'Successfully logged in.',
-    });
-    navigate('/dashboard');
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Login failed');
+      }
+
+      // Store token and user data
+      localStorage.setItem('token', data.accessToken);
+      localStorage.setItem('user', JSON.stringify(data.user));
+
+      toast({
+        title: 'Welcome back!',
+        description: 'Successfully logged in.',
+      });
+      
+      navigate('/dashboard');
+    } catch (err: any) {
+      toast({
+        title: 'Login failed',
+        description: err.message,
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleOAuth = (provider: string) => {

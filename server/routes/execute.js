@@ -1,13 +1,16 @@
 const express = require('express');
 const router = express.Router();
-const axios = require('axios');
-
+const { exec } = require('child_process');
+const fs = require('fs');
+const path = require('path');
 const jwt = require('jsonwebtoken');
+
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key-123';
 
 const authMiddleware = (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'Unauthorized' });
+  
   try {
     req.user = jwt.verify(token, JWT_SECRET);
     next();
@@ -16,51 +19,77 @@ const authMiddleware = (req, res, next) => {
   }
 };
 
-const PISTON_LANGUAGE_VERSIONS = {
-  javascript: '18.15.0',
-  python: '3.10.0',
-  cpp: '10.2.0',
-  csharp: '6.12.0',
-  java: '15.0.2',
-  typescript: '5.0.3'
-};
-
-// Execute Code
+// Local Execute Code
 router.post('/', authMiddleware, async (req, res) => {
   const { language, content } = req.body;
-  if (!language || !content) return res.status(400).json({ error: 'Language and content required' });
   
-  const version = PISTON_LANGUAGE_VERSIONS[language.toLowerCase()] || '*';
+  if (!language || !content) {
+    return res.status(400).json({ error: 'Language and content required' });
+  }
+
+  // 1. Prepare temp directory
+  const tempDir = path.join(process.cwd(), '.temp_code');
+  if (!fs.existsSync(tempDir)) {
+    fs.mkdirSync(tempDir, { recursive: true });
+  }
+
+  // 2. Map language to extension and command
+  const langConfig = {
+    python: { ext: 'py', command: 'python3' },
+    javascript: { ext: 'js', command: 'node' },
+    typescript: { ext: 'ts', command: 'npx tsx' },
+    cpp: { ext: 'cpp', command: 'g++' },
+    go: { ext: 'go', command: 'go run' }
+  };
+
+  const config = langConfig[language.toLowerCase()];
+  if (!config) {
+    return res.status(400).json({ error: `Language ${language} not supported for local execution` });
+  }
+
+  const fileName = `exec_${Date.now()}.${config.ext}`;
+  const filePath = path.join(tempDir, fileName);
 
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => {
-        controller.abort();
-    }, 10000); // 10 second timeout
+    // 3. Write code to file
+    fs.writeFileSync(filePath, content);
 
-    const response = await axios.post('https://emkc.org/api/v2/piston/execute', {
-      language: language.toLowerCase() === 'cpp' ? 'c++' : language.toLowerCase(),
-      version: version,
-      files: [{ content }],
-    }, {
-      signal: controller.signal
-    });
-
-    clearTimeout(timeout);
+    // 4. Build execution command
+    let fullCommand = `${config.command} ${filePath}`;
     
-    res.json({
-      stdout: response.data.run.stdout,
-      stderr: response.data.run.stderr,
-      code: response.data.run.code,
-      signal: response.data.run.signal,
-      compile_output: response.data.compile ? response.data.compile.output : ''
+    // Special handling for C++ (needs compile step)
+    if (language.toLowerCase() === 'cpp') {
+      const outPath = filePath.replace('.cpp', '.out');
+      fullCommand = `g++ ${filePath} -o ${outPath} && ${outPath}`;
+    }
+
+    // 5. Execute with 10s timeout
+    exec(fullCommand, { timeout: 10000 }, (error, stdout, stderr) => {
+      // 6. Cleanup
+      try {
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+        if (language.toLowerCase() === 'cpp') {
+          const outPath = filePath.replace('.cpp', '.out');
+          if (fs.existsSync(outPath)) fs.unlinkSync(outPath);
+        }
+      } catch (cleanupErr) {
+        console.error('[Cleanup Error]', cleanupErr);
+      }
+
+      if (error && error.killed) {
+        return res.status(408).json({ error: 'Execution timeout (10s limit)' });
+      }
+
+      res.json({
+        stdout: stdout,
+        stderr: stderr || (error ? error.message : ''),
+        code: error ? (error.code || 1) : 0,
+        signal: error ? error.signal : null
+      });
     });
 
   } catch (err) {
-    if (axios.isCancel(err)) {
-       return res.status(408).json({ error: 'Execution timeout (10s limit)' });
-    }
-    res.status(500).json({ error: err.response?.data?.message || err.message });
+    res.status(500).json({ error: `Internal execution error: ${err.message}` });
   }
 });
 
