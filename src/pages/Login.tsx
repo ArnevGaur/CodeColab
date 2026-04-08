@@ -63,11 +63,11 @@ const Login = () => {
       >
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <div className="w-12 h-12 bg-gradient-primary rounded-lg flex items-center justify-center">
-              <Code2 className="w-7 h-7 text-white" />
+            <div className="w-12 h-12 flex items-center justify-center">
+              <img src="/logo.png" alt="CodeColab Logo" className="w-10 h-10 object-contain" />
             </div>
             <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-              CodeMate
+              CodeColab
             </h1>
           </div>
           <p className="text-muted-foreground">Sign in to your account</p>

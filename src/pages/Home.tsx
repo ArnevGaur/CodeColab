@@ -42,7 +42,7 @@ const Home = () => {
     
     toast({
       title: isLogin ? 'Welcome back!' : 'Account created!',
-      description: isLogin ? 'Successfully logged in.' : 'Welcome to CodeMate.',
+      description: isLogin ? 'Successfully logged in.' : 'Welcome to CodeColab.',
     });
     navigate('/dashboard');
   };
@@ -72,11 +72,11 @@ const Home = () => {
         >
           {/* Logo and Title */}
           <div className="flex items-center justify-center gap-3 mb-6">
-            <div className="w-16 h-16 bg-gradient-primary rounded-xl flex items-center justify-center shadow-glow">
-              <Code2 className="w-9 h-9 text-white" />
+            <div className="w-16 h-16 flex items-center justify-center">
+              <img src="/logo.png" alt="CodeColab Logo" className="w-14 h-14 object-contain" />
             </div>
             <h1 className="text-5xl md:text-6xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-              CodeMate
+              CodeColab
             </h1>
           </div>
 
@@ -141,7 +141,7 @@ const Home = () => {
             <CardHeader className="text-center pb-4">
               <CardTitle className="text-2xl">{isLogin ? 'Sign In' : 'Create Account'}</CardTitle>
               <CardDescription>
-                {isLogin ? 'Welcome back to CodeMate' : 'Join CodeMate today'}
+                {isLogin ? 'Welcome back to CodeColab' : 'Join CodeColab today'}
               </CardDescription>
             </CardHeader>
             <CardContent>

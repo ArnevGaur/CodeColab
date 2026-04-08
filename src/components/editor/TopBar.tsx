@@ -32,8 +32,9 @@ const TopBar = () => {
   return (
     <>
       <div className="h-12 bg-card border-b border-border flex items-center justify-between px-4">
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-medium text-foreground">CodeMate</span>
+        <div className="flex items-center gap-2">
+          <img src="/logo.png" alt="CodeColab Logo" className="w-5 h-5 object-contain" />
+          <span className="text-sm font-medium text-foreground">CodeColab</span>
           <span className="text-xs text-muted-foreground">·</span>
           <span className="text-xs text-muted-foreground">
             {onlineUsers.length} online

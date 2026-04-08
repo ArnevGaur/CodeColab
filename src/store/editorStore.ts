@@ -58,9 +58,9 @@ export const useEditorStore = create<EditorState>()(
       id: 'readme',
       name: 'README.md',
       type: 'file',
-      content: `# Welcome to CodeMate! 🚀
+      content: `# Welcome to CodeColab! 🚀
 
-CodeMate is a collaborative code editor with AI assistance.
+CodeColab is a collaborative code editor with AI assistance.
 
 ## Getting Started
 
