@@ -40,6 +40,10 @@ const roomSchema = new mongoose.Schema({
   isActive: {
     type: Boolean,
     default: true
+  },
+  lastContent: {
+    type: String,
+    default: ""
   }
 }, {
   timestamps: true

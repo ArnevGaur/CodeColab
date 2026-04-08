@@ -26,10 +26,15 @@ dist-ssr
 # Environment Variables & Secrets (CONFIDENTIAL)
 .env
 .env.*
+**/.env
+**/.env.*
 !.env.example
+**/node_modules/
 *.pem
 *.key
 *.cert
+credentials.json
+service-account.json
 
 # Specific to new backend
 server/node_modules/
