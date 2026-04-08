@@ -90,7 +90,9 @@ router.post('/', authMiddleware, async (req, res) => {
 
     // Write provided stdin to the process
     if (stdin) {
-      child.stdin.write(stdin);
+      // Ensure stdin ends with a newline so input() calls don't hit EOF
+      const normalizedStdin = stdin.endsWith('\n') ? stdin : stdin + '\n';
+      child.stdin.write(normalizedStdin);
     }
     child.stdin.end();
 
