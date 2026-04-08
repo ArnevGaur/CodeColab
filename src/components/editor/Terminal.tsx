@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { Terminal as TerminalIcon } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from '@/components/ui/button';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useEditorStore } from '@/store/editorStore';
 import * as Y from 'yjs';
 import { useParams } from 'react-router-dom';
@@ -17,6 +19,8 @@ const Terminal = ({ doc }: TerminalProps) => {
     'Type "run" to execute your current file, or specify the file: "python main.py", "node index.js"',
   ]);
   const [input, setInput] = useState('');
+  const [stdin, setStdin] = useState('');
+  const [showStdin, setShowStdin] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -109,7 +113,11 @@ const Terminal = ({ doc }: TerminalProps) => {
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify({ language: execLang, content: codeToExecute })
+            body: JSON.stringify({ 
+              language: execLang, 
+              content: codeToExecute,
+              stdin: stdin // Include the provided stdin buffer
+            })
           });
           
           const data = await res.json();
@@ -145,10 +153,43 @@ const Terminal = ({ doc }: TerminalProps) => {
 
   return (
     <div className="h-full bg-editor border-t border-border flex flex-col font-mono text-sm">
-      <div className="px-3 py-2 border-b border-border flex items-center gap-2 bg-surface">
-        <TerminalIcon className="w-4 h-4 text-success" />
-        <span className="text-sm font-medium text-foreground">Terminal</span>
+      <div className="px-3 py-2 border-b border-border flex items-center justify-between bg-surface">
+        <div className="flex items-center gap-2">
+          <TerminalIcon className="w-4 h-4 text-success" />
+          <span className="text-sm font-medium text-foreground">Terminal</span>
+        </div>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={() => setShowStdin(!showStdin)}
+          className={`h-6 text-[10px] px-2 ${showStdin ? 'text-primary bg-primary/10' : 'text-muted-foreground'}`}
+        >
+          {showStdin ? 'Hide Input Buffer' : 'Program Input (stdin)'}
+        </Button>
       </div>
+
+      <AnimatePresence>
+        {showStdin && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="border-b border-border bg-card/50 overflow-hidden"
+          >
+            <div className="p-2 space-y-1">
+              <div className="text-[10px] text-muted-foreground uppercase px-1 font-bold">
+                Program Input Buffer (One line per input call)
+              </div>
+              <textarea 
+                className="w-full bg-editor border border-border rounded p-2 text-xs text-foreground focus:outline-none focus:border-primary min-h-[60px] resize-none font-mono"
+                placeholder="Ex: Arnev&#10;25"
+                value={stdin}
+                onChange={(e) => setStdin(e.target.value)}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <ScrollArea className="flex-1">
         <div className="p-3 pb-8">

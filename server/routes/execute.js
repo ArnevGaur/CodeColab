@@ -19,9 +19,9 @@ const authMiddleware = (req, res, next) => {
   }
 };
 
-// Local Execute Code
+// Local Execute Code with Stdin Support
 router.post('/', authMiddleware, async (req, res) => {
-  const { language, content } = req.body;
+  const { language, content, stdin } = req.body;
   
   if (!language || !content) {
     return res.status(400).json({ error: 'Language and content required' });
@@ -63,8 +63,8 @@ router.post('/', authMiddleware, async (req, res) => {
       fullCommand = `g++ ${filePath} -o ${outPath} && ${outPath}`;
     }
 
-    // 5. Execute with 10s timeout
-    exec(fullCommand, { timeout: 10000 }, (error, stdout, stderr) => {
+    // 5. Execute with 10s timeout and Stdin
+    const child = exec(fullCommand, { timeout: 10000 }, (error, stdout, stderr) => {
       // 6. Cleanup
       try {
         if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
@@ -76,8 +76,8 @@ router.post('/', authMiddleware, async (req, res) => {
         console.error('[Cleanup Error]', cleanupErr);
       }
 
-      if (error && error.killed) {
-        return res.status(408).json({ error: 'Execution timeout (10s limit)' });
+      if (error && (error.killed || error.signal === 'SIGTERM')) {
+        return res.status(408).json({ error: 'Execution timeout (10s limit). Did you forget to provide program input?' });
       }
 
       res.json({
@@ -87,6 +87,12 @@ router.post('/', authMiddleware, async (req, res) => {
         signal: error ? error.signal : null
       });
     });
+
+    // Write provided stdin to the process
+    if (stdin) {
+      child.stdin.write(stdin);
+    }
+    child.stdin.end();
 
   } catch (err) {
     res.status(500).json({ error: `Internal execution error: ${err.message}` });
