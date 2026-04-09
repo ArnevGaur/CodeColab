@@ -321,14 +321,14 @@ const EditorPage = () => {
   return (
     <div className="h-screen flex flex-col bg-background">
       <TopBar />
-      <div className="relative flex-1 overflow-hidden p-3 pt-2">
-        <div className="panel-glass relative flex h-full overflow-hidden">
+      <div className="relative flex-1 overflow-hidden p-2.5">
+        <div className="relative flex h-full overflow-hidden rounded-[1.25rem] border border-white/8 bg-card/70">
           {!leftSidebarOpen && (
             <Button
               variant="outline"
               size="icon"
               onClick={toggleLeftSidebar}
-              className="absolute left-4 top-4 z-20 h-10 w-10 rounded-full bg-card/90"
+              className="absolute left-3 top-3 z-20 h-9 w-9 rounded-full bg-card/90"
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
@@ -339,7 +339,7 @@ const EditorPage = () => {
               variant="outline"
               size="icon"
               onClick={toggleRightSidebar}
-              className="absolute right-4 top-4 z-20 h-10 w-10 rounded-full bg-card/90"
+              className="absolute right-3 top-3 z-20 h-9 w-9 rounded-full bg-card/90"
             >
               <Sparkles className="h-4 w-4" />
             </Button>
@@ -353,7 +353,7 @@ const EditorPage = () => {
                 opacity: leftSidebarOpen ? 1 : 0,
               }}
               transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
-              className={`relative shrink-0 overflow-hidden border-r border-white/8 bg-surface/80 ${
+              className={`relative shrink-0 overflow-hidden border-r border-white/8 bg-surface/72 ${
                 leftSidebarOpen ? '' : 'pointer-events-none border-r-transparent'
               }`}
             >
@@ -387,26 +387,26 @@ const EditorPage = () => {
                     }}
                   />
                 </div>
-                <div className="flex h-10 flex-wrap items-center justify-between gap-2 border-t border-white/8 bg-surface/85 px-3 text-[11px] font-medium text-muted-foreground">
+                <div className="flex min-h-10 flex-wrap items-center justify-between gap-2 border-t border-white/8 bg-surface/80 px-3 py-2 text-[11px] text-muted-foreground">
                   <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                     <button
                       onClick={toggleTerminal}
-                      className="rounded-full border border-white/8 bg-white/[0.04] px-2.5 py-1 text-foreground transition hover:border-primary/20 hover:bg-primary/10"
+                      className="rounded-full border border-white/8 bg-white/[0.03] px-2.5 py-1 text-foreground transition hover:bg-white/[0.05]"
                     >
                       Terminal
                     </button>
                     <span
                       className={`flex items-center gap-2 rounded-full px-2.5 py-1 ${
                         isDocReady
-                          ? 'border border-[hsl(var(--success)/0.28)] bg-[hsl(var(--success)/0.12)] text-[hsl(var(--success))]'
+                          ? 'border border-white/8 bg-white/[0.03] text-foreground'
                           : 'border border-white/8 bg-white/[0.03] text-muted-foreground'
                       }`}
                     >
-                      <span className={`h-2 w-2 rounded-full ${isDocReady ? 'bg-success shadow-[0_0_12px_hsl(var(--success)/0.8)]' : 'bg-destructive'}`} />
+                      <span className={`h-2 w-2 rounded-full ${isDocReady ? 'bg-success' : 'bg-destructive'}`} />
                       {isDocReady ? 'Synced' : 'Connecting'}
                     </span>
-                    <span className="flex items-center gap-2 rounded-full border border-[hsl(var(--success)/0.2)] bg-[hsl(var(--success)/0.1)] px-2.5 py-1 text-[hsl(var(--success))]">
-                      <span className="h-2 w-2 rounded-full bg-success shadow-[0_0_10px_hsl(var(--success)/0.75)]" />
+                    <span className="flex items-center gap-2 rounded-full border border-white/8 bg-white/[0.03] px-2.5 py-1 text-foreground">
+                      <span className="h-2 w-2 rounded-full bg-success" />
                       {onlineUsers} active
                     </span>
                   </div>
@@ -454,7 +454,7 @@ const EditorPage = () => {
                 opacity: rightSidebarOpen ? 1 : 0,
               }}
               transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
-              className={`relative shrink-0 overflow-hidden border-l border-white/8 bg-surface/80 ${
+              className={`relative shrink-0 overflow-hidden border-l border-white/8 bg-surface/72 ${
                 rightSidebarOpen ? '' : 'pointer-events-none border-l-transparent'
               }`}
             >

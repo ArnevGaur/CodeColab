@@ -39,11 +39,11 @@ const ShareModal = ({ open, onOpenChange }: ShareModalProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-card border-border">
+      <DialogContent className="border-white/8 bg-card/95">
         <DialogHeader>
           <DialogTitle className="text-foreground">Share Project</DialogTitle>
           <DialogDescription className="text-muted-foreground">
-            Share this project with your collaborators
+            Copy a room link or set a basic share mode.
           </DialogDescription>
         </DialogHeader>
 
@@ -54,12 +54,12 @@ const ShareModal = ({ open, onOpenChange }: ShareModalProps) => {
               <Input
                 value={shareLink}
                 readOnly
-                className="bg-surface border-border font-mono text-sm"
+                className="font-mono text-sm"
               />
               <Button
                 onClick={handleCopy}
                 size="icon"
-                className="bg-gradient-primary hover:bg-gradient-hover"
+                variant="outline"
               >
                 {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
               </Button>
@@ -89,9 +89,8 @@ const ShareModal = ({ open, onOpenChange }: ShareModalProps) => {
             <div className="flex gap-2">
               <Input
                 placeholder="colleague@example.com"
-                className="bg-surface border-border"
               />
-              <Button className="bg-gradient-primary hover:bg-gradient-hover">Invite</Button>
+              <Button>Invite</Button>
             </div>
           </div>
         </div>

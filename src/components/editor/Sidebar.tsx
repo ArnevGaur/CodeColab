@@ -25,21 +25,21 @@ const Sidebar = ({ doc }: SidebarProps) => {
 
   const renderPlaceholder = (title: string, description: string) => (
     <div className="flex h-full flex-col gap-4 p-4">
-      <div className="panel-subtle p-5">
-        <h3 className="font-display text-xl font-semibold text-foreground">{title}</h3>
-        <p className="mt-3 text-sm leading-7 text-muted-foreground">{description}</p>
+      <div>
+        <h3 className="font-display text-lg font-semibold text-foreground">{title}</h3>
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">{description}</p>
       </div>
-      <div className="panel-subtle flex-1 p-5">
+      <div className="space-y-3 border-t border-white/6 pt-4">
         <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Reserved surface</p>
-        <div className="mt-4 space-y-3">
+        <div className="space-y-3">
           {[
-            "This panel now has proper contrast and spacing.",
-            "Interaction logic can be filled in without redesigning the shell again.",
-            "The editor stays visually coherent even when a feature is not finished yet.",
+            "This area is intentionally quiet until the feature is implemented.",
+            "The shell stays consistent without adding decorative filler.",
+            "The editor keeps the primary focus on files, code, and execution.",
           ].map((point) => (
-            <div key={point} className="flex items-start gap-3 rounded-2xl border border-white/6 bg-white/[0.03] p-4">
-              <div className="mt-1 h-2.5 w-2.5 rounded-full bg-primary" />
-              <p className="text-sm leading-7 text-foreground/88">{point}</p>
+            <div key={point} className="flex items-start gap-3 text-sm leading-6 text-muted-foreground">
+              <div className="mt-2 h-1.5 w-1.5 rounded-full bg-muted-foreground" />
+              <p>{point}</p>
             </div>
           ))}
         </div>
@@ -49,7 +49,7 @@ const Sidebar = ({ doc }: SidebarProps) => {
 
   return (
     <div className="flex h-full min-h-0 bg-surface/80">
-      <div className="flex w-14 flex-col items-center gap-2 border-r border-white/8 bg-editor/75 px-2 py-3">
+      <div className="flex w-14 flex-col items-center gap-2 border-r border-white/8 bg-editor/65 px-2 py-3">
         {tabs.map((tab) => {
           const Icon = tab.icon;
 
@@ -59,8 +59,8 @@ const Sidebar = ({ doc }: SidebarProps) => {
                 variant={leftSidebarTab === tab.id ? "secondary" : "ghost"}
                 size="icon"
                 onClick={() => setLeftSidebarTab(tab.id)}
-                className={`h-11 w-11 rounded-2xl ${
-                  leftSidebarTab === tab.id ? "bg-primary/12 text-primary" : "text-muted-foreground"
+                className={`h-10 w-10 rounded-full ${
+                  leftSidebarTab === tab.id ? "bg-white/[0.07] text-foreground" : "text-muted-foreground"
                 }`}
                 title={tab.label}
               >
@@ -74,7 +74,7 @@ const Sidebar = ({ doc }: SidebarProps) => {
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="border-b border-white/8 px-4 py-3">
           <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{activeTab.label}</p>
-          <p className="mt-2 text-sm text-foreground/90">{activeTab.description}</p>
+          <p className="mt-1.5 text-sm text-muted-foreground">{activeTab.description}</p>
         </div>
 
         <div className="min-h-0 flex-1">

@@ -146,7 +146,7 @@ const Terminal = ({ doc }: TerminalProps) => {
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/8 bg-surface/85 px-3 py-2">
         <div>
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-foreground">
-            <TerminalIcon className="h-4 w-4 text-primary" />
+            <TerminalIcon className="h-4 w-4 text-muted-foreground" />
             Terminal
           </div>
           <p className="mt-1 text-[11px] text-muted-foreground">Run the active file or specify one directly.</p>
@@ -161,7 +161,7 @@ const Terminal = ({ doc }: TerminalProps) => {
             {showStdin ? "Hide stdin" : "Program input"}
           </Button>
           {isExecuting ? (
-            <div className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-primary">
+            <div className="rounded-full border border-white/8 bg-white/[0.03] px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
               Running...
             </div>
           ) : null}
@@ -203,8 +203,8 @@ const Terminal = ({ doc }: TerminalProps) => {
       </ScrollArea>
 
       <div className="border-t border-white/8 bg-surface/85 px-3 py-2">
-        <div className="flex items-center gap-2 rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2">
-          <span className="select-none text-primary">$</span>
+        <div className="flex items-center gap-2 rounded-xl border border-white/8 bg-white/[0.025] px-3 py-2">
+          <span className="select-none text-muted-foreground">$</span>
           <input
             autoFocus
             className="w-full flex-1 bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground"

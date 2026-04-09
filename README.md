@@ -377,4 +377,4 @@ The goal is to make the editor feel like the product, instead of treating collab
 
 ## License
 
-MIT
+Arnev Gaur

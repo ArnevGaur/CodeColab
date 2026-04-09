@@ -181,11 +181,11 @@ const AIChat = ({ doc }: AIChatProps) => {
           <div className="min-w-0">
             <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Assistant</p>
             <div className="mt-1 flex items-center gap-2">
-              <div className="flex h-6 w-6 items-center justify-center rounded-md border border-white/8 bg-white/[0.04] text-primary">
+              <div className="flex h-6 w-6 items-center justify-center rounded-full border border-white/8 bg-white/[0.03] text-muted-foreground">
                 <Bot className="h-3.5 w-3.5" />
               </div>
               <div className="min-w-0">
-                <p className="truncate text-[13px] font-semibold text-foreground">CodeColab AI Chat</p>
+                <p className="truncate text-[13px] font-medium text-foreground">CodeColab AI Chat</p>
                 <p className="truncate text-[10px] text-muted-foreground">Working on {activeFileName}</p>
               </div>
             </div>
@@ -217,8 +217,8 @@ const AIChat = ({ doc }: AIChatProps) => {
       <ScrollArea className="flex-1">
         {chatMessages.length === 0 ? (
           <div className="px-3 py-3 pr-4">
-            <div className="panel-subtle flex min-h-[11rem] flex-col items-center justify-center gap-3 p-4 text-center">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/8 bg-editor text-primary">
+            <div className="flex min-h-[11rem] flex-col items-center justify-center gap-3 rounded-xl border border-white/8 bg-white/[0.025] p-4 text-center">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full border border-white/8 bg-editor text-muted-foreground">
                 <Sparkles className="h-4 w-4" />
               </div>
               <div>
@@ -259,9 +259,9 @@ const AIChat = ({ doc }: AIChatProps) => {
                     <div
                       className={cn(
                         "w-full overflow-hidden rounded-[1.05rem] border p-3 text-[13px] leading-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]",
-                        isUser && "border-primary/18 bg-primary text-primary-foreground",
-                        msg.isAI && !isSystem && "border-white/10 bg-[#111827] text-slate-100",
-                        isSystem && "border-white/12 bg-white/[0.05] text-foreground",
+                        isUser && "border-primary/14 bg-primary/92 text-primary-foreground",
+                        msg.isAI && !isSystem && "border-white/8 bg-white/[0.03] text-foreground",
+                        isSystem && "border-white/10 bg-white/[0.05] text-foreground",
                       )}
                     >
                       {msg.message.split(/(```[\s\S]*?```)/g).map((part, index) => {
@@ -313,7 +313,7 @@ const AIChat = ({ doc }: AIChatProps) => {
 
             {isTyping ? (
               <div className="flex justify-start">
-                <div className="rounded-[1.05rem] border border-white/8 bg-[#111827] px-3 py-2 text-[12px] text-slate-300">
+                <div className="rounded-[1.05rem] border border-white/8 bg-white/[0.03] px-3 py-2 text-[12px] text-muted-foreground">
                   <div className="flex items-center gap-2">
                     <Sparkles className="h-3.5 w-3.5 animate-pulse text-primary" />
                     AI is thinking...
@@ -326,7 +326,7 @@ const AIChat = ({ doc }: AIChatProps) => {
       </ScrollArea>
 
       <div className="border-t border-white/8 px-3 py-2">
-        <div className="rounded-[0.95rem] border border-white/8 bg-white/[0.03] p-2">
+        <div className="rounded-[0.95rem] border border-white/8 bg-white/[0.025] p-2">
           <Textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}

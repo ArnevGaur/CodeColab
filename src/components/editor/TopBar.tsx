@@ -43,17 +43,11 @@ const TopBar = () => {
   return (
     <>
       <div className="border-b border-white/8 bg-[hsl(var(--surface-bg)/0.82)] backdrop-blur-2xl">
-        <div className="flex min-h-14 flex-col gap-2 px-3 py-2 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex min-h-14 flex-col gap-3 px-3 py-2.5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 items-center gap-3">
             <BrandMark compact quiet subtitle={currentFileName} />
-            <div className="hidden items-center gap-2 xl:flex">
-              <div className="rounded-full border border-white/8 bg-white/[0.04] px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">
-                Collaborative room
-              </div>
-              <div className="flex items-center gap-2 rounded-full border border-[hsl(var(--success)/0.22)] bg-[hsl(var(--success)/0.1)] px-2.5 py-1 text-[11px] font-semibold text-[hsl(var(--success))]">
-                <span className="h-2 w-2 rounded-full bg-success shadow-[0_0_10px_hsl(var(--success)/0.78)]" />
-                {onlineUsers.length || 1} active now
-              </div>
+            <div className="hidden items-center gap-2 lg:flex">
+              <span className="text-xs text-muted-foreground">{onlineUsers.length || 1} active</span>
             </div>
           </div>
 
@@ -89,16 +83,16 @@ const TopBar = () => {
             <select
               value={role}
               onChange={(e) => setRole(e.target.value as "owner" | "editor" | "viewer")}
-              className="h-8 rounded-full border border-white/8 bg-secondary/80 px-3 text-[12px] text-foreground outline-none transition focus:border-primary"
+              className="h-8 rounded-full border border-white/8 bg-secondary/55 px-3 text-[12px] text-foreground outline-none transition focus:border-primary"
             >
               <option value="owner">Owner</option>
               <option value="editor">Editor</option>
               <option value="viewer">Viewer</option>
             </select>
 
-            <div className="flex items-center gap-2 rounded-full border border-white/8 bg-white/[0.04] px-2 py-1">
-              <div className="hidden items-center gap-2 pl-1.5 text-[11px] font-semibold text-muted-foreground sm:flex">
-                <Users className="h-3.5 w-3.5 text-accent" />
+            <div className="flex items-center gap-2 rounded-full border border-white/8 bg-white/[0.025] px-2 py-1">
+              <div className="hidden items-center gap-2 pl-1 text-[11px] text-muted-foreground sm:flex">
+                <Users className="h-3.5 w-3.5" />
                 Team
               </div>
               <div className="flex -space-x-2">
@@ -110,7 +104,7 @@ const TopBar = () => {
                           initial={{ scale: 0.9, opacity: 0 }}
                           animate={{ scale: 1, opacity: 1 }}
                           transition={{ duration: 0.2, delay: index * 0.04 }}
-                          className="relative flex h-7 w-7 items-center justify-center rounded-xl border border-editor text-[10px] font-bold text-background shadow-md"
+                          className="relative flex h-7 w-7 items-center justify-center rounded-full border border-editor text-[10px] font-bold text-background"
                           style={{ backgroundColor: user.color }}
                         >
                           {user.name.charAt(0).toUpperCase()}
@@ -131,7 +125,7 @@ const TopBar = () => {
               </div>
             </div>
 
-            <Button onClick={() => setShowShareModal(true)} size="sm" className="accent-ring rounded-full px-3 text-[12px]">
+            <Button onClick={() => setShowShareModal(true)} size="sm" className="rounded-full px-3 text-[12px]">
               <Share2 className="h-4 w-4" />
               Share
             </Button>

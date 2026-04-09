@@ -114,8 +114,8 @@ const HistoryPanel = ({ doc }: HistoryPanelProps) => {
       <div className="flex items-center justify-between border-b border-white/8 px-4 py-3">
         <div>
           <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">History</p>
-          <div className="mt-1 flex items-center gap-2 text-sm font-semibold text-foreground">
-            <History className="h-4 w-4 text-primary" />
+          <div className="mt-1 flex items-center gap-2 text-sm text-foreground">
+            <History className="h-4 w-4 text-muted-foreground" />
             Checkpoints
           </div>
         </div>
@@ -132,8 +132,8 @@ const HistoryPanel = ({ doc }: HistoryPanelProps) => {
 
       <ScrollArea className="flex-1 p-3">
         {checkpoints.length === 0 && !isLoading ? (
-          <div className="panel-subtle m-1 flex flex-col items-center gap-3 p-8 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/[0.04] text-primary">
+          <div className="m-1 flex flex-col items-center gap-3 rounded-xl border border-white/8 bg-white/[0.025] p-8 text-center">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full border border-white/8 text-muted-foreground">
               <Zap className="h-5 w-5" />
             </div>
             <p className="max-w-xs text-sm leading-7 text-muted-foreground">
@@ -143,7 +143,7 @@ const HistoryPanel = ({ doc }: HistoryPanelProps) => {
         ) : (
           <div className="space-y-3">
             {checkpoints.map((checkpoint) => (
-              <div key={checkpoint._id} className="panel-subtle p-4">
+              <div key={checkpoint._id} className="rounded-xl border border-white/8 bg-white/[0.025] p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="space-y-2">
                     {getTypeBadge(checkpoint.type)}
@@ -155,12 +155,12 @@ const HistoryPanel = ({ doc }: HistoryPanelProps) => {
                       </div>
                     </div>
                   </div>
-                  <div className="rounded-full border border-white/8 bg-white/[0.04] px-3 py-1 text-[11px] text-muted-foreground">
+                  <div className="rounded-full border border-white/8 px-3 py-1 text-[11px] text-muted-foreground">
                     {formatDistanceToNow(new Date(checkpoint.createdAt), { addSuffix: true })}
                   </div>
                 </div>
 
-                <div className="mt-4 rounded-2xl border border-white/6 bg-editor/80 p-3">
+                <div className="mt-4 rounded-xl border border-white/6 bg-editor/70 p-3">
                   <p className="line-clamp-3 whitespace-pre-wrap text-[12px] leading-6 text-muted-foreground">
                     {checkpoint.content}
                   </p>

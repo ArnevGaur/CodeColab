@@ -85,18 +85,18 @@ const FileExplorer = ({ doc }: FileExplorerProps) => {
       <div className="flex items-center justify-between border-b border-white/8 px-4 py-3">
         <div>
           <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Workspace</p>
-          <p className="mt-1 text-sm font-semibold text-foreground">{fileCount} file(s)</p>
+          <p className="mt-1 text-sm text-foreground">{fileCount} file(s)</p>
         </div>
-        <Button variant="secondary" size="icon" onClick={() => setIsCreating(true)} className="h-9 w-9 rounded-2xl">
+        <Button variant="secondary" size="icon" onClick={() => setIsCreating(true)} className="h-8 w-8 rounded-full">
           <Plus className="h-4 w-4" />
         </Button>
       </div>
 
       <div className="flex-1 space-y-2 overflow-auto p-3">
         {isCreating ? (
-          <div className="rounded-2xl border border-primary/25 bg-primary/10 p-3">
+          <div className="rounded-xl border border-white/8 bg-white/[0.03] p-3">
             <div className="flex items-center gap-2">
-              <FileText className="h-4 w-4 shrink-0 text-primary" />
+              <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
               <input
                 autoFocus
                 type="text"
@@ -128,7 +128,7 @@ const FileExplorer = ({ doc }: FileExplorerProps) => {
               <div className="space-y-1">
                 <button
                   onClick={() => toggleFolder(file.id)}
-                  className="flex w-full items-center gap-2 rounded-2xl px-3 py-2.5 text-left text-sm text-foreground transition hover:bg-white/[0.04]"
+                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm text-foreground transition hover:bg-white/[0.04]"
                 >
                   {expandedFolders.has(file.id) ? (
                     <ChevronDown className="h-4 w-4 text-muted-foreground" />
@@ -144,9 +144,9 @@ const FileExplorer = ({ doc }: FileExplorerProps) => {
                       <button
                         key={child.id}
                         onClick={() => setCurrentFile(child.id)}
-                        className={`flex w-full items-center gap-3 rounded-2xl px-3 py-2 text-left text-sm transition ${
+                        className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm transition ${
                           currentFile === child.id
-                            ? "border border-primary/20 bg-primary/12 text-foreground"
+                            ? "border border-white/10 bg-white/[0.05] text-foreground"
                             : "text-muted-foreground hover:bg-white/[0.04] hover:text-foreground"
                         }`}
                       >
@@ -160,13 +160,13 @@ const FileExplorer = ({ doc }: FileExplorerProps) => {
             ) : (
               <button
                 onClick={() => setCurrentFile(file.id)}
-                className={`flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left text-sm transition ${
+                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition ${
                   currentFile === file.id
-                    ? "border border-primary/20 bg-primary/12 text-foreground"
+                    ? "border border-white/10 bg-white/[0.05] text-foreground"
                     : "text-muted-foreground hover:bg-white/[0.04] hover:text-foreground"
                 }`}
               >
-                <FileText className={`h-4 w-4 ${currentFile === file.id ? "text-primary" : "text-muted-foreground"}`} />
+                <FileText className="h-4 w-4 text-muted-foreground" />
                 <span className="truncate">{file.name}</span>
               </button>
             )}
