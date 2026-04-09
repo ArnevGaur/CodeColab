@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
+import { authenticatedFetch } from "@/lib/auth";
 import { useEditorStore } from "@/store/editorStore";
 import DiffModal from "./DiffModal";
 
@@ -38,10 +39,7 @@ const HistoryPanel = ({ doc }: HistoryPanelProps) => {
     if (!projectId) return;
 
     try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(`/api/checkpoints/${projectId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await authenticatedFetch(`/api/checkpoints/${projectId}`);
 
       if (res.ok) {
         const data = await res.json();
@@ -62,10 +60,8 @@ const HistoryPanel = ({ doc }: HistoryPanelProps) => {
 
   const handleRestore = async (id: string, label: string) => {
     try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(`/api/checkpoints/restore/${id}`, {
+      const res = await authenticatedFetch(`/api/checkpoints/restore/${id}`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (!res.ok) throw new Error("Restore failed");

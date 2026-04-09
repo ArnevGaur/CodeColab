@@ -15,6 +15,7 @@ import { IndexeddbPersistence } from 'y-indexeddb';
 import { useParams } from 'react-router-dom';
 import socket from '@/lib/socket';
 import { useToast } from '@/hooks/use-toast';
+import { authenticatedFetch } from '@/lib/auth';
 
 const EditorPage = () => {
   const { projectId } = useParams();
@@ -106,14 +107,11 @@ const EditorPage = () => {
     if (!docRef.current || !projectId || !currentFile) return;
     
     const content = docRef.current.getText(`file:${currentFile}`).toString();
-    const token = localStorage.getItem('token');
-    
     try {
-      const res = await fetch('/api/checkpoints', {
+      const res = await authenticatedFetch('/api/checkpoints', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           roomId: projectId,
@@ -261,24 +259,43 @@ const EditorPage = () => {
       base: 'vs-dark',
       inherit: true,
       rules: [
-        { token: 'comment', foreground: '6E6E6E' },
-        { token: 'keyword', foreground: 'D6D6D6' },
-        { token: 'string', foreground: 'C4C4C4' },
-        { token: 'number', foreground: 'E6E6E6' },
-        { token: 'type', foreground: 'B8B8B8' },
+        { token: 'comment', foreground: '6B7280', fontStyle: 'italic' },
+        { token: 'keyword', foreground: 'C792EA' },
+        { token: 'operator', foreground: '89DDFF' },
+        { token: 'string', foreground: 'C3E88D' },
+        { token: 'number', foreground: 'F78C6C' },
+        { token: 'regexp', foreground: 'F78C6C' },
+        { token: 'type', foreground: '82AAFF' },
+        { token: 'type.identifier', foreground: '82AAFF' },
+        { token: 'class', foreground: 'FFCB6B' },
+        { token: 'class.identifier', foreground: 'FFCB6B' },
+        { token: 'function', foreground: '82AAFF' },
+        { token: 'function.identifier', foreground: '82AAFF' },
+        { token: 'variable', foreground: 'EEFFFF' },
+        { token: 'variable.predefined', foreground: 'F07178' },
+        { token: 'tag', foreground: 'F07178' },
+        { token: 'attribute.name', foreground: 'FFCB6B' },
+        { token: 'attribute.value', foreground: 'C3E88D' },
+        { token: 'delimiter', foreground: '89DDFF' },
       ],
       colors: {
-        'editor.background': '#080808',
-        'editorGutter.background': '#080808',
-        'editor.lineHighlightBackground': '#141414',
-        'editorLineNumber.foreground': '#686868',
-        'editorLineNumber.activeForeground': '#E0E0E0',
-        'editorCursor.foreground': '#E0E0E0',
-        'editor.selectionBackground': '#2A2A2A',
-        'editor.inactiveSelectionBackground': '#1A1A1A',
-        'editorIndentGuide.background1': '#1A1A1A',
-        'editorIndentGuide.activeBackground1': '#303030',
-        'editorBracketMatch.border': '#FFFFFF33',
+        'editor.background': '#0B1220',
+        'editorGutter.background': '#0B1220',
+        'editor.lineHighlightBackground': '#111A2C',
+        'editorLineNumber.foreground': '#546178',
+        'editorLineNumber.activeForeground': '#D6DEEB',
+        'editorCursor.foreground': '#FFCB6B',
+        'editor.selectionBackground': '#21304A',
+        'editor.inactiveSelectionBackground': '#182235',
+        'editorIndentGuide.background1': '#1A2438',
+        'editorIndentGuide.activeBackground1': '#31415F',
+        'editorBracketMatch.border': '#82AAFF55',
+        'editorBracketMatch.background': '#82AAFF11',
+        'editor.selectionHighlightBackground': '#21304A66',
+        'editor.findMatchBackground': '#FFCB6B33',
+        'editor.findMatchBorder': '#FFCB6B66',
+        'editor.wordHighlightBackground': '#89DDFF22',
+        'editor.wordHighlightStrongBackground': '#C792EA22',
       },
     });
     monaco.editor.setTheme('codecolab-midnight');

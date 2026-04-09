@@ -6,6 +6,7 @@ import * as Y from "yjs";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
+import { authenticatedFetch, getAccessTokenPayload } from "@/lib/auth";
 import { useEditorStore } from "@/store/editorStore";
 
 interface TerminalProps {
@@ -68,22 +69,14 @@ const Terminal = ({ doc }: TerminalProps) => {
           codeToExecute = doc.getText(`file:${currentFile}`).toString();
         }
 
-        const token = localStorage.getItem("token");
-
         try {
-          let username = "User";
-          if (token) {
-            try {
-              const payload = JSON.parse(atob(token.split(".")[1]));
-              username = payload.username || "User";
-            } catch {}
-          }
+          const payload = getAccessTokenPayload();
+          const username = payload?.username || "User";
 
-          await fetch("/api/checkpoints", {
+          await authenticatedFetch("/api/checkpoints", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
             },
             body: JSON.stringify({
               roomId: projectId,
@@ -105,11 +98,10 @@ const Terminal = ({ doc }: TerminalProps) => {
         else if (ext === "cs") execLang = "csharp";
 
         try {
-          const res = await fetch("/api/execute", {
+          const res = await authenticatedFetch("/api/execute", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
             },
             body: JSON.stringify({
               language: execLang,

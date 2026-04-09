@@ -41,14 +41,14 @@ const TopBar = () => {
   return (
     <>
       <div className="border-b border-white/8 bg-[hsl(var(--surface-bg)/0.82)] backdrop-blur-2xl">
-        <div className="flex min-h-16 flex-col gap-3 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex min-w-0 items-center gap-4">
-            <BrandMark compact subtitle={currentFileName} />
+        <div className="flex min-h-14 flex-col gap-2 px-3 py-2 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 items-center gap-3">
+            <BrandMark compact quiet subtitle={currentFileName} />
             <div className="hidden items-center gap-2 xl:flex">
-              <div className="rounded-full border border-white/8 bg-white/[0.04] px-3 py-1 text-xs font-semibold text-muted-foreground">
+              <div className="rounded-full border border-white/8 bg-white/[0.04] px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">
                 Collaborative room
               </div>
-              <div className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+              <div className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">
                 {onlineUsers.length || 1} active now
               </div>
             </div>
@@ -59,7 +59,7 @@ const TopBar = () => {
               variant={leftSidebarOpen ? "secondary" : "ghost"}
               size="sm"
               onClick={toggleLeftSidebar}
-              className="rounded-full px-3"
+              className="rounded-full px-2.5 text-[12px]"
             >
               <FolderGit2 className="h-4 w-4" />
               Files
@@ -68,7 +68,7 @@ const TopBar = () => {
               variant={rightSidebarOpen ? "secondary" : "ghost"}
               size="sm"
               onClick={toggleRightSidebar}
-              className="rounded-full px-3"
+              className="rounded-full px-2.5 text-[12px]"
             >
               <Sparkles className="h-4 w-4" />
               Assistant
@@ -77,7 +77,7 @@ const TopBar = () => {
               variant={terminalOpen ? "secondary" : "ghost"}
               size="sm"
               onClick={toggleTerminal}
-              className="rounded-full px-3"
+              className="rounded-full px-2.5 text-[12px]"
             >
               <Terminal className="h-4 w-4" />
               Terminal
@@ -86,15 +86,15 @@ const TopBar = () => {
             <select
               value={role}
               onChange={(e) => setRole(e.target.value as "owner" | "editor" | "viewer")}
-              className="h-10 rounded-full border border-white/8 bg-secondary/80 px-4 text-sm text-foreground outline-none transition focus:border-primary"
+              className="h-8 rounded-full border border-white/8 bg-secondary/80 px-3 text-[12px] text-foreground outline-none transition focus:border-primary"
             >
               <option value="owner">Owner</option>
               <option value="editor">Editor</option>
               <option value="viewer">Viewer</option>
             </select>
 
-            <div className="flex items-center gap-2 rounded-full border border-white/8 bg-white/[0.04] px-2 py-1.5">
-              <div className="hidden items-center gap-2 pl-2 text-xs font-semibold text-muted-foreground sm:flex">
+            <div className="flex items-center gap-2 rounded-full border border-white/8 bg-white/[0.04] px-2 py-1">
+              <div className="hidden items-center gap-2 pl-1.5 text-[11px] font-semibold text-muted-foreground sm:flex">
                 <Users className="h-3.5 w-3.5 text-accent" />
                 Team
               </div>
@@ -107,11 +107,11 @@ const TopBar = () => {
                           initial={{ scale: 0.9, opacity: 0 }}
                           animate={{ scale: 1, opacity: 1 }}
                           transition={{ duration: 0.2, delay: index * 0.04 }}
-                          className="relative flex h-9 w-9 items-center justify-center rounded-2xl border border-editor text-xs font-bold text-background shadow-md"
+                          className="relative flex h-7 w-7 items-center justify-center rounded-xl border border-editor text-[10px] font-bold text-background shadow-md"
                           style={{ backgroundColor: user.color }}
                         >
                           {user.name.charAt(0).toUpperCase()}
-                          <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-editor bg-success" />
+                          <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border border-editor bg-success" />
                         </motion.div>
                       </TooltipTrigger>
                       <TooltipContent side="bottom" className="max-w-[15rem] border-white/10 bg-card/95 text-xs">
@@ -123,12 +123,12 @@ const TopBar = () => {
                     </Tooltip>
                   ))
                 ) : (
-                  <div className="flex h-9 items-center rounded-full px-3 text-xs text-muted-foreground">Just you</div>
+                  <div className="flex h-7 items-center rounded-full px-2.5 text-[11px] text-muted-foreground">Just you</div>
                 )}
               </div>
             </div>
 
-            <Button onClick={() => setShowShareModal(true)} size="sm" className="accent-ring rounded-full px-4">
+            <Button onClick={() => setShowShareModal(true)} size="sm" className="accent-ring rounded-full px-3 text-[12px]">
               <Share2 className="h-4 w-4" />
               Share
             </Button>
@@ -139,7 +139,7 @@ const TopBar = () => {
                   variant="ghost"
                   size="icon"
                   onClick={handleLogout}
-                  className="rounded-full hover:bg-destructive/10 hover:text-destructive"
+                  className="h-8 w-8 rounded-full hover:bg-destructive/10 hover:text-destructive"
                 >
                   <LogOut className="h-4 w-4" />
                 </Button>

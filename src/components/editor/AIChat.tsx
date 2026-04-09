@@ -18,6 +18,18 @@ const quickActions = [
   { label: "Ideas", icon: Sparkles },
 ];
 
+const MAX_CONTEXT_MESSAGES = 10;
+
+function buildConversationHistory(messages: ChatMessage[]) {
+  return messages
+    .filter((message) => message.user !== "System")
+    .slice(-MAX_CONTEXT_MESSAGES)
+    .map((message) => ({
+      role: message.isAI ? "assistant" : "user",
+      content: message.message,
+    }));
+}
+
 const AIChat = ({ doc }: AIChatProps) => {
   const { chatMessages, setChatMessages, currentFile } = useEditorStore();
   const [message, setMessage] = useState("");
@@ -44,10 +56,19 @@ const AIChat = ({ doc }: AIChatProps) => {
     try {
       const currentCode =
         currentFile && doc ? doc.getText(`file:${currentFile}`).toString() || "/* No code in editor */" : "/* No code in editor */";
+      const activeFileName =
+        useEditorStore.getState().files.find((file) => file.id === currentFile)?.name || "Untitled";
+      const chatSnapshot = doc.getArray<ChatMessage>("chat").toArray();
+      const priorMessages =
+        chatSnapshot.length > 0 && !chatSnapshot[chatSnapshot.length - 1].isAI
+          ? chatSnapshot.slice(0, -1)
+          : chatSnapshot;
+      const conversationHistory = buildConversationHistory(priorMessages);
+
       let prompt = userText;
 
       if (actionType) {
-        prompt = `Please ${actionType.toLowerCase()} the following code context. User request: ${userText || "Use the current file."}`;
+        prompt = `Please ${actionType.toLowerCase()} the active file. ${userText ? `User request: ${userText}` : "Focus on the current code and be specific."}`;
       }
 
       const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -62,15 +83,21 @@ const AIChat = ({ doc }: AIChatProps) => {
             {
               role: "system",
               content:
-                "You are a helpful AI coding assistant in a collaborative editor called CodeColab. Keep responses concise, technical, and actionable. Format code snippets with markdown fences.",
+                "You are a helpful AI coding assistant in a collaborative editor called CodeColab. Continue the existing conversation naturally instead of restarting from scratch. Keep responses concise, technical, and actionable. When useful, reference the active file and current code. Format code snippets with markdown fences.",
             },
+            ...conversationHistory,
             {
               role: "user",
-              content: `${prompt}\n\n### Current Editor Code ###\n\`\`\`\n${currentCode}\n\`\`\``,
+              content: `Active file: ${activeFileName}\n\nUser request: ${prompt}\n\n### Current Editor Code ###\n\`\`\`\n${currentCode}\n\`\`\``,
             },
           ],
+          temperature: 0.35,
         }),
       });
+
+      if (!response.ok) {
+        throw new Error(`Groq request failed (${response.status})`);
+      }
 
       const data = await response.json();
       if (data.error) throw new Error(data.error.message || "Groq API error");
@@ -111,7 +138,7 @@ const AIChat = ({ doc }: AIChatProps) => {
 
   const handleSend = async () => {
     const textToProcess = message.trim();
-    if (!textToProcess || !doc) return;
+    if (!textToProcess || !doc || isTyping) return;
 
     const timestamp = new Date().toLocaleTimeString("en-US", {
       hour: "numeric",
@@ -133,7 +160,7 @@ const AIChat = ({ doc }: AIChatProps) => {
   };
 
   const handleQuickAction = async (actionLabel: string) => {
-    if (!doc) return;
+    if (!doc || isTyping) return;
 
     const timestamp = new Date().toLocaleTimeString("en-US", {
       hour: "numeric",
