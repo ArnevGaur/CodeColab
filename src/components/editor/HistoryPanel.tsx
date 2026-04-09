@@ -1,14 +1,15 @@
-import { useState, useEffect, useCallback } from 'react';
-import { History, RotateCcw, Eye, Clock, User, Zap, Save, Play } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { useParams } from 'react-router-dom';
-import { formatDistanceToNow } from 'date-fns';
-import { Badge } from '@/components/ui/badge';
-import * as Y from 'yjs';
-import DiffModal from './DiffModal';
-import { useToast } from '@/hooks/use-toast';
-import { useEditorStore } from '@/store/editorStore';
+import { useCallback, useEffect, useState } from "react";
+import { Clock, Eye, History, Play, RotateCcw, Save, User, Zap } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
+import { useParams } from "react-router-dom";
+import * as Y from "yjs";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useToast } from "@/hooks/use-toast";
+import { useEditorStore } from "@/store/editorStore";
+import DiffModal from "./DiffModal";
 
 interface HistoryPanelProps {
   doc: Y.Doc | null;
@@ -18,7 +19,7 @@ interface Checkpoint {
   _id: string;
   roomId: string;
   content: string;
-  type: 'auto' | 'manual' | 'pre-execution';
+  type: "auto" | "manual" | "pre-execution";
   author: string;
   language: string;
   label: string;
@@ -35,17 +36,19 @@ const HistoryPanel = ({ doc }: HistoryPanelProps) => {
 
   const fetchCheckpoints = useCallback(async () => {
     if (!projectId) return;
+
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       const res = await fetch(`/api/checkpoints/${projectId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
+
       if (res.ok) {
         const data = await res.json();
         setCheckpoints(data);
       }
     } catch (err) {
-      console.error('Failed to fetch checkpoints', err);
+      console.error("Failed to fetch checkpoints", err);
     } finally {
       setIsLoading(false);
     }
@@ -53,111 +56,132 @@ const HistoryPanel = ({ doc }: HistoryPanelProps) => {
 
   useEffect(() => {
     fetchCheckpoints();
-    // Refresh list every 30 seconds
     const interval = setInterval(fetchCheckpoints, 30000);
     return () => clearInterval(interval);
   }, [fetchCheckpoints]);
 
   const handleRestore = async (id: string, label: string) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       const res = await fetch(`/api/checkpoints/restore/${id}`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` }
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error('Restore failed');
-      
-      toast({ title: 'Code restored', description: `Successfully restored to: ${label}` });
+
+      if (!res.ok) throw new Error("Restore failed");
+
+      toast({ title: "Code restored", description: `Restored checkpoint: ${label}` });
     } catch (err) {
-      toast({ title: 'Restore failed', description: 'Could not restore this version.', variant: 'destructive' });
+      toast({
+        title: "Restore failed",
+        description: "Could not restore this version.",
+        variant: "destructive",
+      });
     }
   };
 
   const getTypeBadge = (type: string) => {
     switch (type) {
-      case 'auto':
-        return <Badge variant="secondary" className="text-[10px] bg-blue-500/10 text-blue-400 border-blue-500/20"><Clock className="w-2.5 h-2.5 mr-1" /> Auto</Badge>;
-      case 'manual':
-        return <Badge variant="secondary" className="text-[10px] bg-green-500/10 text-green-400 border-green-500/20"><Save className="w-2.5 h-2.5 mr-1" /> Manual</Badge>;
-      case 'pre-execution':
-        return <Badge variant="secondary" className="text-[10px] bg-amber-500/10 text-amber-400 border-amber-500/20"><Play className="w-2.5 h-2.5 mr-1" /> Before Run</Badge>;
+      case "auto":
+        return (
+          <Badge variant="secondary" className="border-white/10 bg-white/[0.04] text-muted-foreground">
+            <Clock className="mr-1 h-3 w-3" />
+            Auto
+          </Badge>
+        );
+      case "manual":
+        return (
+          <Badge variant="secondary" className="border-primary/20 bg-primary/10 text-primary">
+            <Save className="mr-1 h-3 w-3" />
+            Manual
+          </Badge>
+        );
+      case "pre-execution":
+        return (
+          <Badge variant="secondary" className="border-accent/20 bg-accent/10 text-accent">
+            <Play className="mr-1 h-3 w-3" />
+            Before Run
+          </Badge>
+        );
       default:
-        return <Badge variant="outline" className="text-[10px]">Version</Badge>;
+        return <Badge variant="outline">Version</Badge>;
     }
   };
 
   const getCurrentEditorContent = () => {
-    if (!doc || !currentFile) return '';
+    if (!doc || !currentFile) return "";
     return doc.getText(`file:${currentFile}`).toString();
   };
 
   return (
-    <div className="h-full bg-surface border-r border-border flex flex-col">
-      <div className="p-3 border-b border-border flex items-center justify-between bg-card">
-        <div className="flex items-center gap-2">
-          <History className="w-4 h-4 text-primary" />
-          <span className="text-sm font-medium text-foreground">Checkpoint History</span>
+    <div className="flex h-full min-h-0 flex-col bg-surface/75">
+      <div className="flex items-center justify-between border-b border-white/8 px-4 py-3">
+        <div>
+          <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">History</p>
+          <div className="mt-1 flex items-center gap-2 text-sm font-semibold text-foreground">
+            <History className="h-4 w-4 text-primary" />
+            Checkpoints
+          </div>
         </div>
         <Button
           variant="ghost"
           size="icon"
           onClick={fetchCheckpoints}
-          className="h-7 w-7 text-muted-foreground hover:text-foreground"
+          className="h-9 w-9 rounded-2xl text-muted-foreground hover:text-foreground"
           title="Refresh"
         >
-          <RotateCcw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+          <RotateCcw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
         </Button>
       </div>
 
-      <ScrollArea className="flex-1 p-2">
+      <ScrollArea className="flex-1 p-3">
         {checkpoints.length === 0 && !isLoading ? (
-          <div className="text-xs text-muted-foreground p-8 text-center flex flex-col items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center opacity-50">
-                <Zap className="w-6 h-6" />
+          <div className="panel-subtle m-1 flex flex-col items-center gap-3 p-8 text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/[0.04] text-primary">
+              <Zap className="h-5 w-5" />
             </div>
-            No checkpoints yet. Code is saved automatically every 2 minutes or before you run code.
+            <p className="max-w-xs text-sm leading-7 text-muted-foreground">
+              No checkpoints yet. Automatic saves appear here, plus the pre-run snapshots created before execution.
+            </p>
           </div>
         ) : (
-          <div className="space-y-3 p-1">
-            {checkpoints.map((cp) => (
-              <div 
-                key={cp._id} 
-                className="p-3 rounded-lg bg-card border border-border group hover:border-primary/50 transition-all shadow-sm"
-              >
-                <div className="flex justify-between items-start mb-2">
-                  <div className="flex flex-col gap-1">
-                    {getTypeBadge(cp.type)}
-                    <span className="text-xs font-semibold text-foreground flex items-center gap-1.5 mt-1">
-                      <User className="w-3 h-3 text-muted-foreground" />
-                      {cp.author}
-                    </span>
+          <div className="space-y-3">
+            {checkpoints.map((checkpoint) => (
+              <div key={checkpoint._id} className="panel-subtle p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-2">
+                    {getTypeBadge(checkpoint.type)}
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">{checkpoint.label || "Saved checkpoint"}</p>
+                      <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                        <User className="h-3.5 w-3.5" />
+                        {checkpoint.author}
+                      </div>
+                    </div>
                   </div>
-                  <span className="text-[10px] text-muted-foreground whitespace-nowrap bg-muted px-1.5 py-0.5 rounded">
-                    {formatDistanceToNow(new Date(cp.createdAt), { addSuffix: true })}
-                  </span>
+                  <div className="rounded-full border border-white/8 bg-white/[0.04] px-3 py-1 text-[11px] text-muted-foreground">
+                    {formatDistanceToNow(new Date(checkpoint.createdAt), { addSuffix: true })}
+                  </div>
                 </div>
 
-                <div className="text-[11px] text-muted-foreground line-clamp-2 font-mono bg-editor/50 p-2 rounded border border-border/50 mb-3 select-none">
-                  {cp.content.slice(0, 60)}...
+                <div className="mt-4 rounded-2xl border border-white/6 bg-editor/80 p-3">
+                  <p className="line-clamp-3 whitespace-pre-wrap text-[12px] leading-6 text-muted-foreground">
+                    {checkpoint.content}
+                  </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 opacity-80 group-hover:opacity-100 transition-opacity">
-                  <Button 
-                    onClick={() => setDiffTarget(cp)}
-                    variant="outline" 
-                    size="sm" 
-                    className="text-[11px] h-7 border-border hover:bg-primary/10 hover:text-primary"
-                  >
-                    <Eye className="w-3 h-3 mr-1.5" />
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  <Button onClick={() => setDiffTarget(checkpoint)} variant="outline" size="sm" className="justify-center">
+                    <Eye className="h-3.5 w-3.5" />
                     Diff
                   </Button>
-                  <Button 
-                    onClick={() => handleRestore(cp._id, cp.label)}
-                    variant="outline" 
-                    size="sm" 
-                    className="text-[11px] h-7 border-border hover:bg-primary/10 hover:text-primary"
+                  <Button
+                    onClick={() => handleRestore(checkpoint._id, checkpoint.label)}
+                    variant="outline"
+                    size="sm"
+                    className="justify-center"
                   >
-                    <RotateCcw className="w-3 h-3 mr-1.5" />
+                    <RotateCcw className="h-3.5 w-3.5" />
                     Restore
                   </Button>
                 </div>
@@ -167,8 +191,7 @@ const HistoryPanel = ({ doc }: HistoryPanelProps) => {
         )}
       </ScrollArea>
 
-      {/* Diff Modal */}
-      {diffTarget && (
+      {diffTarget ? (
         <DiffModal
           isOpen={!!diffTarget}
           onClose={() => setDiffTarget(null)}
@@ -177,7 +200,7 @@ const HistoryPanel = ({ doc }: HistoryPanelProps) => {
           label={diffTarget.label}
           language={diffTarget.language}
         />
-      )}
+      ) : null}
     </div>
   );
 };

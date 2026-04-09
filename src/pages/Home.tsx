@@ -1,299 +1,282 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Code2, Mail, Lock, User, Chrome, Sparkles, Users, Zap } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
-import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { motion } from "framer-motion";
+import {
+  ArrowRight,
+  Clock3,
+  FolderGit2,
+  Play,
+  ShieldCheck,
+  Sparkles,
+  Terminal,
+  Users,
+} from "lucide-react";
+import { Link } from "react-router-dom";
+
+import AmbientBackdrop from "@/components/layout/AmbientBackdrop";
+import BrandMark from "@/components/layout/BrandMark";
+import { Button } from "@/components/ui/button";
+
+const primaryFeatures = [
+  {
+    icon: Sparkles,
+    title: "AI where you need it",
+    description: "Explain, debug, and reshape code in the same workspace instead of bouncing between tools.",
+  },
+  {
+    icon: Users,
+    title: "Real-time by default",
+    description: "Presence, cursors, and live document sync are treated as first-class workflow primitives.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Version safety built in",
+    description: "Manual and automatic checkpoints keep risky execution from turning into lost work.",
+  },
+];
+
+const workspacePreview = [
+  { label: "Latency", value: "32ms", hint: "editor sync" },
+  { label: "Sessions", value: "128", hint: "active today" },
+  { label: "Recovery", value: "100%", hint: "checkpointed" },
+];
 
 const Home = () => {
-  const [isLogin, setIsLogin] = useState(true);
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [agreedToTerms, setAgreedToTerms] = useState(false);
-  const navigate = useNavigate();
-  const { toast } = useToast();
-
-  const handleAuth = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!isLogin) {
-      if (password !== confirmPassword) {
-        toast({
-          title: 'Error',
-          description: 'Passwords do not match.',
-          variant: 'destructive',
-        });
-        return;
-      }
-      if (!agreedToTerms) {
-        toast({
-          title: 'Error',
-          description: 'Please agree to the terms and conditions.',
-          variant: 'destructive',
-        });
-        return;
-      }
-    }
-    
-    toast({
-      title: isLogin ? 'Welcome back!' : 'Account created!',
-      description: isLogin ? 'Successfully logged in.' : 'Welcome to CodeColab.',
-    });
-    navigate('/dashboard');
-  };
-
-  const handleOAuth = (provider: string) => {
-    toast({
-      title: `${provider} authentication`,
-      description: 'This is a demo. OAuth not implemented yet.',
-    });
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-subtle relative overflow-hidden">
-      {/* Animated background elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-secondary/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-      </div>
+    <AmbientBackdrop>
+      <header className="border-b border-white/6 bg-[hsl(var(--background)/0.5)] backdrop-blur-xl">
+        <div className="container flex items-center justify-between px-4 py-5 sm:px-6">
+          <BrandMark compact subtitle="Collaborative coding workspace" />
 
-      <div className="relative z-10 container mx-auto px-4 py-8">
-        {/* Hero Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="text-center max-w-4xl mx-auto mb-16"
+          <nav className="hidden items-center gap-6 text-sm text-muted-foreground md:flex">
+            <a href="#product" className="transition hover:text-foreground">
+              Product
+            </a>
+            <a href="#features" className="transition hover:text-foreground">
+              Features
+            </a>
+            <a href="#workspace" className="transition hover:text-foreground">
+              Workspace
+            </a>
+          </nav>
+
+          <div className="flex items-center gap-3">
+            <Button asChild variant="ghost" className="hidden sm:inline-flex">
+              <Link to="/login">Sign in</Link>
+            </Button>
+            <Button asChild>
+              <Link to="/signup">
+                Start free
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      <main className="container px-4 pb-16 pt-10 sm:px-6 lg:pb-24 lg:pt-16">
+        <section
+          id="product"
+          className="grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14"
         >
-          {/* Logo and Title */}
-          <div className="flex items-center justify-center gap-3 mb-6">
-            <div className="w-16 h-16 flex items-center justify-center">
-              <img src="/logo.png" alt="CodeColab Logo" className="w-14 h-14 object-contain" />
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="max-w-2xl"
+          >
+            <div className="eyebrow w-fit">
+              <Sparkles className="h-3.5 w-3.5 text-primary" />
+              A darker, sharper workspace for teams
             </div>
-            <h1 className="text-5xl md:text-6xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-              CodeColab
+
+            <h1 className="mt-6 font-display text-5xl font-bold leading-[0.95] text-foreground sm:text-6xl xl:text-7xl">
+              Rebuild collaboration around a workspace people actually want to stay in.
             </h1>
-          </div>
 
-          <p className="text-xl md:text-2xl text-foreground/90 mb-4 leading-relaxed">
-            Collaborative code editor with AI-powered assistance.
-          </p>
-          <p className="text-lg text-muted-foreground mb-8">
-            Write, collaborate, and innovate together in real-time.
-          </p>
+            <p className="mt-6 max-w-xl text-base leading-8 text-muted-foreground sm:text-lg">
+              CodeColab combines the clarity of premium product dashboards with a real-time editor, inline AI,
+              and recoverable execution flow. The result should feel closer to Linear and Raycast than a starter
+              template with random cards.
+            </p>
 
-          {/* Features */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-              className="flex flex-col items-center gap-3 p-6 rounded-xl bg-card/50 border border-border/50 backdrop-blur-sm"
-            >
-              <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Sparkles className="w-6 h-6 text-primary" />
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <Button asChild size="lg" className="accent-ring">
+                <Link to="/signup">
+                  Launch workspace
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
+              <Button asChild size="lg" variant="outline">
+                <Link to="/dashboard">
+                  <Play className="h-4 w-4" />
+                  Enter demo dashboard
+                </Link>
+              </Button>
+            </div>
+
+            <div className="mt-10 grid gap-4 sm:grid-cols-3">
+              {workspacePreview.map((item, index) => (
+                <motion.div
+                  key={item.label}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.45, delay: 0.1 + index * 0.08 }}
+                  className="panel-subtle p-4"
+                >
+                  <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{item.label}</p>
+                  <p className="mt-3 font-display text-3xl font-bold text-foreground">{item.value}</p>
+                  <p className="mt-2 text-sm text-muted-foreground">{item.hint}</p>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.7, delay: 0.15 }}
+            className="panel-glass panel-grid p-4 sm:p-5"
+            id="workspace"
+          >
+            <div className="rounded-[1.4rem] border border-white/8 bg-editor p-4 shadow-[inset_0_1px_0_hsl(0_0%_100%/_0.03)]">
+              <div className="flex items-center justify-between border-b border-white/8 pb-4">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Room Preview</p>
+                  <h2 className="mt-2 font-display text-2xl font-semibold text-foreground">Design System Refactor</h2>
+                </div>
+                <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-xs font-semibold text-foreground">
+                  <div className="h-2 w-2 rounded-full bg-success shadow-[0_0_14px_hsl(var(--success)/0.8)]" />
+                  6 collaborators live
+                </div>
               </div>
-              <h3 className="text-lg font-semibold text-foreground">AI Assistance</h3>
-              <p className="text-sm text-muted-foreground">Smart code suggestions and error detection</p>
-            </motion.div>
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="flex flex-col items-center gap-3 p-6 rounded-xl bg-card/50 border border-border/50 backdrop-blur-sm"
-            >
-              <div className="w-12 h-12 rounded-lg bg-secondary/10 flex items-center justify-center">
-                <Users className="w-6 h-6 text-secondary" />
-              </div>
-              <h3 className="text-lg font-semibold text-foreground">Real-time Collaboration</h3>
-              <p className="text-sm text-muted-foreground">Code together with your team seamlessly</p>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-              className="flex flex-col items-center gap-3 p-6 rounded-xl bg-card/50 border border-border/50 backdrop-blur-sm"
-            >
-              <div className="w-12 h-12 rounded-lg bg-accent/10 flex items-center justify-center">
-                <Zap className="w-6 h-6 text-accent" />
-              </div>
-              <h3 className="text-lg font-semibold text-foreground">Lightning Fast</h3>
-              <p className="text-sm text-muted-foreground">Optimized performance for smooth coding</p>
-            </motion.div>
-          </div>
-        </motion.div>
-
-        {/* Auth Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
-          className="max-w-md mx-auto"
-        >
-          <Card className="bg-card/80 backdrop-blur-xl border-border/50 shadow-card">
-            <CardHeader className="text-center pb-4">
-              <CardTitle className="text-2xl">{isLogin ? 'Sign In' : 'Create Account'}</CardTitle>
-              <CardDescription>
-                {isLogin ? 'Welcome back to CodeColab' : 'Join CodeColab today'}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleAuth} className="space-y-4">
-                {!isLogin && (
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Full Name</label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        type="text"
-                        placeholder="John Doe"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        className="pl-10 bg-surface border-border"
-                        required
-                      />
+              <div className="mt-4 grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+                <div className="panel-subtle p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                      <FolderGit2 className="h-4 w-4 text-primary" />
+                      Workspace Tree
+                    </div>
+                    <div className="rounded-full bg-white/[0.05] px-2.5 py-1 text-[11px] uppercase tracking-[0.15em] text-muted-foreground">
+                      TS + Node
                     </div>
                   </div>
-                )}
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">Email</label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      type="email"
-                      placeholder="you@example.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="pl-10 bg-surface border-border"
-                      required
-                    />
+                  <div className="mt-4 space-y-2 text-sm">
+                    {[
+                      "src/pages/Home.tsx",
+                      "src/components/editor/TopBar.tsx",
+                      "src/index.css",
+                      "server/routes/room.js",
+                    ].map((file, index) => (
+                      <div
+                        key={file}
+                        className={`flex items-center gap-3 rounded-2xl px-3 py-2 ${
+                          index === 0 ? "bg-primary/12 text-foreground" : "bg-white/[0.03] text-muted-foreground"
+                        }`}
+                      >
+                        <div className="h-2 w-2 rounded-full bg-accent" />
+                        <span>{file}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">Password</label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      type="password"
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="pl-10 bg-surface border-border"
-                      required
-                    />
+                <div className="space-y-4">
+                  <div className="panel-subtle p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                        <Users className="h-4 w-4 text-accent" />
+                        Presence
+                      </div>
+                      <span className="text-xs text-muted-foreground">Realtime awareness</span>
+                    </div>
+                    <div className="mt-4 flex -space-x-2">
+                      {["AR", "JM", "SK", "LN"].map((name, index) => (
+                        <div
+                          key={name}
+                          className="flex h-11 w-11 items-center justify-center rounded-2xl border border-editor text-xs font-bold text-background"
+                          style={{
+                            backgroundColor: ["#e2e2e2", "#cfcfcf", "#b6b6b6", "#8f8f8f"][index],
+                          }}
+                        >
+                          {name}
+                        </div>
+                      ))}
+                    </div>
+                    <p className="mt-4 text-sm leading-6 text-muted-foreground">
+                      Who is active, what file they are editing, and whether the session is healthy should be visible at
+                      a glance.
+                    </p>
                   </div>
-                </div>
 
-                {!isLogin && (
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Confirm Password</label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        type="password"
-                        placeholder="••••••••"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        className="pl-10 bg-surface border-border"
-                        required
-                      />
+                  <div className="panel-subtle p-4">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                      <Terminal className="h-4 w-4 text-primary" />
+                      AI + Runtime
+                    </div>
+                    <div className="mt-4 space-y-3 text-sm">
+                      <div className="rounded-2xl border border-white/6 bg-white/[0.03] p-3 text-muted-foreground">
+                        Suggested refactor: compress auth shell into one reusable layout and tighten contrast ratios.
+                      </div>
+                      <div className="rounded-2xl border border-primary/20 bg-primary/10 p-3 text-foreground">
+                        Output: build finished in 1.4s. Zero type errors. Session checkpoint saved.
+                      </div>
                     </div>
                   </div>
-                )}
-
-                {!isLogin && (
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="terms"
-                      checked={agreedToTerms}
-                      onCheckedChange={(checked) => setAgreedToTerms(checked as boolean)}
-                    />
-                    <label htmlFor="terms" className="text-sm text-muted-foreground">
-                      I agree to the{' '}
-                      <button type="button" className="text-primary hover:underline">
-                        terms and conditions
-                      </button>
-                    </label>
-                  </div>
-                )}
-
-                <Button type="submit" className="w-full bg-gradient-primary hover:bg-gradient-hover shadow-glow">
-                  {isLogin ? 'Sign In' : 'Create Account'}
-                </Button>
-              </form>
-
-              <div className="relative my-6">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-border"></div>
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
                 </div>
               </div>
+            </div>
+          </motion.div>
+        </section>
 
-              <div className="grid grid-cols-2 gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => handleOAuth('Google')}
-                  className="bg-surface border-border hover:bg-muted"
-                >
-                  <Chrome className="w-4 h-4 mr-2" />
-                  Google
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => handleOAuth('GitHub')}
-                  className="bg-surface border-border hover:bg-muted"
-                >
-                  <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
-                  </svg>
-                  GitHub
-                </Button>
+        <section id="features" className="mt-14 grid gap-4 lg:mt-20 lg:grid-cols-3">
+          {primaryFeatures.map((feature, index) => (
+            <motion.div
+              key={feature.title}
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.24 + index * 0.08 }}
+              className="panel-glass p-6"
+            >
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/12 text-primary">
+                <feature.icon className="h-5 w-5" />
               </div>
+              <h3 className="mt-5 font-display text-2xl font-semibold text-foreground">{feature.title}</h3>
+              <p className="mt-3 text-sm leading-7 text-muted-foreground">{feature.description}</p>
+            </motion.div>
+          ))}
+        </section>
 
-              <div className="mt-6 text-center">
-                <button
-                  type="button"
-                  onClick={() => setIsLogin(!isLogin)}
-                  className="text-sm text-muted-foreground hover:text-foreground"
-                >
-                  {isLogin ? "Don't have an account? " : 'Already have an account? '}
-                  <span className="text-primary hover:underline">
-                    {isLogin ? 'Sign up' : 'Sign in'}
-                  </span>
-                </button>
+        <section className="mt-14 grid gap-4 lg:mt-20 lg:grid-cols-[0.9fr_1.1fr]">
+          <div className="panel-glass p-6 sm:p-8">
+            <div className="eyebrow w-fit">
+              <Clock3 className="h-3.5 w-3.5 text-accent" />
+              What changed in the redesign
+            </div>
+            <h2 className="mt-5 font-display text-3xl font-bold text-foreground">
+              Stronger contrast, fewer meaningless panels, and a UI that reads faster.
+            </h2>
+            <p className="mt-4 max-w-lg text-sm leading-7 text-muted-foreground sm:text-base">
+              The updated direction leans into a studio-grade dark shell: layered depth, warmer call-to-action color,
+              better spacing rhythm, and surfaces that feel intentional instead of generated.
+            </p>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            {[
+              "Navigation, auth, dashboard, and editor now share one visual system.",
+              "Glass surfaces and restrained accent use replace flat grayscale filler.",
+              "Key status information is easier to scan without reading every label.",
+              "The interface stays dark-first while remaining readable on smaller screens.",
+            ].map((point) => (
+              <div key={point} className="panel-subtle flex items-start gap-3 p-5">
+                <div className="mt-1 h-2.5 w-2.5 rounded-full bg-primary" />
+                <p className="text-sm leading-7 text-foreground/88">{point}</p>
               </div>
-
-              {isLogin && (
-                <div className="mt-4 text-center">
-                  <Link to="/dashboard" className="text-sm text-muted-foreground hover:text-primary">
-                    Continue as guest →
-                  </Link>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <p className="text-center text-xs text-muted-foreground mt-6">
-            Press <kbd className="px-2 py-1 text-xs bg-muted rounded border border-border">Ctrl</kbd> +{' '}
-            <kbd className="px-2 py-1 text-xs bg-muted rounded border border-border">K</kbd> to access AI
-            commands anywhere
-          </p>
-        </motion.div>
-      </div>
-    </div>
+            ))}
+          </div>
+        </section>
+      </main>
+    </AmbientBackdrop>
   );
 };
 

@@ -1,11 +1,12 @@
-import { useState, useRef, useEffect } from 'react';
-import { Terminal as TerminalIcon } from 'lucide-react';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Button } from '@/components/ui/button';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useEditorStore } from '@/store/editorStore';
-import * as Y from 'yjs';
-import { useParams } from 'react-router-dom';
+import { useEffect, useRef, useState } from "react";
+import { Terminal as TerminalIcon } from "lucide-react";
+import { useParams } from "react-router-dom";
+import * as Y from "yjs";
+
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Textarea } from "@/components/ui/textarea";
+import { useEditorStore } from "@/store/editorStore";
 
 interface TerminalProps {
   doc?: Y.Doc | null;
@@ -15,126 +16,123 @@ const Terminal = ({ doc }: TerminalProps) => {
   const { projectId } = useParams();
   const { files, currentFile } = useEditorStore();
   const [history, setHistory] = useState<string[]>([
-    'Welcome to CodeColab Terminal',
-    'Type "run" to execute your current file, or specify the file: "python main.py", "node index.js"',
+    "CodeColab terminal ready.",
+    'Use "run" to execute the active file, or target one directly: "python main.py", "node index.js".',
   ]);
-  const [input, setInput] = useState('');
-  const [stdin, setStdin] = useState('');
+  const [input, setInput] = useState("");
+  const [stdin, setStdin] = useState("");
   const [showStdin, setShowStdin] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: 'smooth' });
+    endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [history]);
 
   const handleCommand = (cmd: string) => {
     const trimmed = cmd.trim();
     if (!trimmed) return;
-    
+
     setHistory((prev) => [...prev, `$ ${trimmed}`]);
-    
-    const args = trimmed.split(' ');
+
+    const args = trimmed.split(" ");
     const command = args[0].toLowerCase();
-    
-    if (command === 'clear') {
+
+    if (command === "clear") {
       setHistory([]);
       return;
     }
 
-    const currentFileData = files.find(f => f.id === currentFile);
-    const fileName = args.length > 1 ? args[1] : (currentFileData?.name || '');
-    
+    const currentFileData = files.find((file) => file.id === currentFile);
+    const fileName = args.length > 1 ? args[1] : currentFileData?.name || "";
+
     if (!fileName) {
-      setHistory((prev) => [...prev, 'Error: No file specified or open.']);
+      setHistory((prev) => [...prev, "Error: no file specified or active."]);
       return;
     }
 
-    const file = files.find(f => f.name === fileName);
+    const file = files.find((entry) => entry.name === fileName);
 
-    if (command === 'run' || command === 'node' || command === 'python' || command === 'go' || command === 'javac') {
+    if (command === "run" || command === "node" || command === "python" || command === "go" || command === "javac") {
       if (!file) {
-        setHistory((prev) => [...prev, `Error: File '${fileName}' not found in workspace.`]);
+        setHistory((prev) => [...prev, `Error: file '${fileName}' not found in workspace.`]);
         return;
       }
-      
+
       const execute = async () => {
         setIsExecuting(true);
-        setHistory((prev) => [...prev, `⚙️ Executing ${fileName}...`]);
-        
+        setHistory((prev) => [...prev, `Executing ${fileName}...`]);
+
         let codeToExecute = file.content;
         if (file.id === currentFile && doc) {
           codeToExecute = doc.getText(`file:${currentFile}`).toString();
         }
 
-        const token = localStorage.getItem('token');
-        
-        // 1. Critical: Save pre-execution checkpoint
+        const token = localStorage.getItem("token");
+
         try {
-          // Decode username from token for the label
-          let username = 'User';
+          let username = "User";
           if (token) {
             try {
-              const payload = JSON.parse(atob(token.split('.')[1]));
-              username = payload.username || 'User';
-            } catch (e) {}
+              const payload = JSON.parse(atob(token.split(".")[1]));
+              username = payload.username || "User";
+            } catch {}
           }
 
-          await fetch('/api/checkpoints', {
-            method: 'POST',
+          await fetch("/api/checkpoints", {
+            method: "POST",
             headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
             },
             body: JSON.stringify({
               roomId: projectId,
               content: codeToExecute,
-              type: 'pre-execution',
-              label: `Before run by ${username}`
-            })
+              type: "pre-execution",
+              label: `Before run by ${username}`,
+            }),
           });
         } catch (e) {
-          console.error('Failed to save pre-execution checkpoint', e);
+          console.error("Failed to save pre-execution checkpoint", e);
         }
 
-        // 2. Execute code
-        const ext = fileName.split('.').pop()?.toLowerCase();
-        let execLang = 'javascript';
-        if (ext === 'py') execLang = 'python';
-        else if (ext === 'cpp' || ext === 'c') execLang = 'cpp';
-        else if (ext === 'java') execLang = 'java';
-        else if (ext === 'ts') execLang = 'typescript';
-        else if (ext === 'cs') execLang = 'csharp';
+        const ext = fileName.split(".").pop()?.toLowerCase();
+        let execLang = "javascript";
+        if (ext === "py") execLang = "python";
+        else if (ext === "cpp" || ext === "c") execLang = "cpp";
+        else if (ext === "java") execLang = "java";
+        else if (ext === "ts") execLang = "typescript";
+        else if (ext === "cs") execLang = "csharp";
 
         try {
-          const res = await fetch('/api/execute', {
-            method: 'POST',
-            headers: { 
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
+          const res = await fetch("/api/execute", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
             },
-            body: JSON.stringify({ 
-              language: execLang, 
+            body: JSON.stringify({
+              language: execLang,
               content: codeToExecute,
-              stdin: stdin // Include the provided stdin buffer
-            })
+              stdin,
+            }),
           });
-          
+
           const data = await res.json();
-          
+
           if (data.error) {
-            setHistory((prev) => [...prev, `Error (${data.error}): ${data.stderr ? data.stderr : ''}`]);
+            setHistory((prev) => [...prev, `Error (${data.error}): ${data.stderr ? data.stderr : ""}`]);
           } else {
-            const outLines = (data.stdout || '').split('\n').filter(Boolean);
-            const errLines = (data.stderr || '').split('\n').filter(Boolean);
-            const compLines = (data.compile_output || '').split('\n').filter(Boolean);
-            
+            const outLines = (data.stdout || "").split("\n").filter(Boolean);
+            const errLines = (data.stderr || "").split("\n").filter(Boolean);
+            const compLines = (data.compile_output || "").split("\n").filter(Boolean);
+
             setHistory((prev) => [
               ...prev,
-              ...compLines.map((l: string) => `Compiler: ${l}`),
+              ...compLines.map((line: string) => `Compiler: ${line}`),
               ...outLines,
-              ...errLines.map((e: string) => `Error: ${e}`),
-              `Process exited with code ${data.code !== undefined ? data.code : 'unknown'}`
+              ...errLines.map((line: string) => `Error: ${line}`),
+              `Process exited with code ${data.code !== undefined ? data.code : "unknown"}`,
             ]);
           }
         } catch (err: any) {
@@ -152,51 +150,58 @@ const Terminal = ({ doc }: TerminalProps) => {
   };
 
   return (
-    <div className="h-full bg-editor border-t border-border flex flex-col font-mono text-sm">
-      <div className="px-3 py-2 border-b border-border flex items-center justify-between bg-surface">
-        <div className="flex items-center gap-2">
-          <TerminalIcon className="w-4 h-4 text-success" />
-          <span className="text-sm font-medium text-foreground">Terminal</span>
+    <div className="flex h-full min-h-0 flex-col bg-editor text-sm font-mono text-foreground">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/8 bg-surface/85 px-4 py-3">
+        <div>
+          <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            <TerminalIcon className="h-4 w-4 text-primary" />
+            Terminal
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">Run the active file or specify one directly.</p>
         </div>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          onClick={() => setShowStdin(!showStdin)}
-          className={`h-6 text-[10px] px-2 ${showStdin ? 'text-primary bg-primary/10' : 'text-muted-foreground'}`}
-        >
-          {showStdin ? 'Hide Input Buffer' : 'Program Input (stdin)'}
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant={showStdin ? "secondary" : "ghost"}
+            size="sm"
+            onClick={() => setShowStdin(!showStdin)}
+            className="rounded-full px-3"
+          >
+            {showStdin ? "Hide stdin" : "Program input"}
+          </Button>
+          {isExecuting ? (
+            <div className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+              Running...
+            </div>
+          ) : null}
+        </div>
       </div>
 
-      <AnimatePresence>
-        {showStdin && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="border-b border-border bg-card/50 overflow-hidden"
-          >
-            <div className="p-2 space-y-1">
-              <div className="text-[10px] text-muted-foreground uppercase px-1 font-bold">
-                Program Input Buffer (One line per input call)
-              </div>
-              <textarea 
-                className="w-full bg-editor border border-border rounded p-2 text-xs text-foreground focus:outline-none focus:border-primary min-h-[60px] resize-none font-mono"
-                placeholder="Ex: Arnev&#10;25"
-                value={stdin}
-                onChange={(e) => setStdin(e.target.value)}
-              />
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {showStdin ? (
+        <div className="border-b border-white/8 bg-surface/70 p-4">
+          <p className="mb-2 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+            Program Input Buffer
+          </p>
+          <Textarea
+            value={stdin}
+            onChange={(e) => setStdin(e.target.value)}
+            placeholder={"One line per input call\nEx: Arnev\n25"}
+            className="min-h-[88px] font-mono text-xs"
+          />
+        </div>
+      ) : null}
 
       <ScrollArea className="flex-1">
-        <div className="p-3 pb-8">
-          {history.map((line, i) => (
+        <div className="space-y-2 p-4">
+          {history.map((line, index) => (
             <div
-              key={i}
-              className={`${line.startsWith('$') ? 'text-success' : line.startsWith('Error') ? 'text-destructive' : 'text-muted-foreground'} whitespace-pre-wrap break-all`}
+              key={`${line}-${index}`}
+              className={`whitespace-pre-wrap break-all ${
+                line.startsWith("$")
+                  ? "text-primary"
+                  : line.startsWith("Error")
+                    ? "text-destructive"
+                    : "text-foreground/82"
+              }`}
             >
               {line}
             </div>
@@ -204,23 +209,26 @@ const Terminal = ({ doc }: TerminalProps) => {
           <div ref={endRef} />
         </div>
       </ScrollArea>
-      
-      <div className="p-2 border-t border-border bg-background flex items-center gap-2 w-full">
-        <span className="text-success select-none">$</span>
-        <input 
-          autoFocus
-          className="flex-1 bg-transparent outline-none text-foreground w-full"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-               handleCommand(input);
-               setInput('');
-            }
-          }}
-          spellCheck={false}
-          autoComplete="off"
-        />
+
+      <div className="border-t border-white/8 bg-surface/85 px-4 py-3">
+        <div className="flex items-center gap-3 rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3">
+          <span className="select-none text-primary">$</span>
+          <input
+            autoFocus
+            className="w-full flex-1 bg-transparent text-foreground outline-none placeholder:text-muted-foreground"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                handleCommand(input);
+                setInput("");
+              }
+            }}
+            spellCheck={false}
+            autoComplete="off"
+            placeholder='run or node index.js'
+          />
+        </div>
       </div>
     </div>
   );

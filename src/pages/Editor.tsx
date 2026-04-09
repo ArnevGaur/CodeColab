@@ -1,7 +1,6 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import MonacoEditor from '@monaco-editor/react';
-import { ChevronLeft, ChevronRight, ChevronUp } from 'lucide-react';
+import { ChevronRight, ChevronUp, Sparkles } from 'lucide-react';
 import { useEditorStore } from '@/store/editorStore';
 import { Button } from '@/components/ui/button';
 import TopBar from '@/components/editor/TopBar';
@@ -221,7 +220,7 @@ const EditorPage = () => {
         myId = payload.userId || myId;
       } catch {}
     }
-    const colors = ['#f87171', '#fb923c', '#fbbf24', '#a3e635', '#4ade80', '#34d399', '#2dd4bf', '#38bdf8', '#818cf8', '#c084fc', '#f472b6'];
+    const colors = ['#e8e8e8', '#d6d6d6', '#c4c4c4', '#b3b3b3', '#a1a1a1', '#8f8f8f', '#7d7d7d', '#dcdcdc', '#cacaca', '#aaaaaa', '#8a8a8a'];
     const myColor = colors[Math.abs(myId.split('').reduce((a, c) => a + c.charCodeAt(0), 0)) % colors.length];
     provider.awareness.setLocalStateField('user', { name: myName, color: myColor });
 
@@ -258,6 +257,32 @@ const EditorPage = () => {
     monacoRef.current = monaco;
     setIsEditorReady(true);
 
+    monaco.editor.defineTheme('codecolab-midnight', {
+      base: 'vs-dark',
+      inherit: true,
+      rules: [
+        { token: 'comment', foreground: '6E6E6E' },
+        { token: 'keyword', foreground: 'D6D6D6' },
+        { token: 'string', foreground: 'C4C4C4' },
+        { token: 'number', foreground: 'E6E6E6' },
+        { token: 'type', foreground: 'B8B8B8' },
+      ],
+      colors: {
+        'editor.background': '#080808',
+        'editorGutter.background': '#080808',
+        'editor.lineHighlightBackground': '#141414',
+        'editorLineNumber.foreground': '#686868',
+        'editorLineNumber.activeForeground': '#E0E0E0',
+        'editorCursor.foreground': '#E0E0E0',
+        'editor.selectionBackground': '#2A2A2A',
+        'editor.inactiveSelectionBackground': '#1A1A1A',
+        'editorIndentGuide.background1': '#1A1A1A',
+        'editorIndentGuide.activeBackground1': '#303030',
+        'editorBracketMatch.border': '#FFFFFF33',
+      },
+    });
+    monaco.editor.setTheme('codecolab-midnight');
+
     // Ctrl+S / Cmd+S manual save
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => saveCheckpoint('manual'));
 
@@ -279,46 +304,112 @@ const EditorPage = () => {
   return (
     <div className="h-screen flex flex-col bg-background">
       <TopBar />
-      <ResizablePanelGroup direction="horizontal" className="flex-1 overflow-hidden">
-        {!leftSidebarOpen && (
-          <Button variant="ghost" size="icon" onClick={toggleLeftSidebar} className="absolute left-0 top-20 z-10 bg-surface border-r border-border w-6 h-8 rounded-l-none"><ChevronRight className="w-3 h-3" /></Button>
-        )}
-        {leftSidebarOpen && (
-          <>
-            <ResizablePanel defaultSize={20} minSize={10} maxSize={40} className="relative bg-surface flex flex-col"><Sidebar doc={docRef.current} /></ResizablePanel>
-            <ResizableHandle className="w-1 bg-border hover:bg-primary/50" />
-          </>
-        )}
-        <ResizablePanel defaultSize={60} minSize={30} className="flex flex-col">
-          <div className="flex-1 overflow-hidden relative">
-            <MonacoEditor
-              height="100%"
-              language={getLanguageFromExtension(currentFileName)}
-              onMount={handleEditorMount}
-              theme="vs-dark"
-              options={{ minimap: { enabled: true }, fontSize: 14, automaticLayout: true, readOnly: role === 'viewer' }}
-            />
-          </div>
-          <div className="h-8 bg-card border-t border-border flex items-center justify-between px-4 text-xs text-muted-foreground font-medium">
-            <div className="flex items-center gap-4">
-              <button onClick={toggleTerminal}>Terminal</button>
-              <span className="flex items-center gap-1">
-                <span className={`w-2 h-2 rounded-full ${isDocReady ? 'bg-success animate-pulse' : 'bg-destructive'}`}></span>
-                {isDocReady ? 'Synced' : 'Connecting...'}
-              </span>
-              <span>👤 {onlineUsers} active</span>
-            </div>
-            <div className="flex items-center gap-4"><span>{getLanguageFromExtension(currentFileName)}</span><span>{currentFileName}</span></div>
-          </div>
-          {terminalOpen && <div className="h-48 relative border-t border-border bg-black"><Terminal doc={docRef.current} /><Button variant="ghost" size="icon" onClick={toggleTerminal} className="absolute right-2 top-2"><ChevronUp className="w-4 h-4" /></Button></div>}
-        </ResizablePanel>
-        {rightSidebarOpen && (
-          <>
-            <ResizableHandle className="w-1 bg-border hover:bg-primary/50" />
-            <ResizablePanel defaultSize={20} minSize={15} maxSize={40} className="relative bg-surface flex flex-col"><AIChat doc={docRef.current} /></ResizablePanel>
-          </>
-        )}
-      </ResizablePanelGroup>
+      <div className="relative flex-1 overflow-hidden p-3 pt-2">
+        <div className="panel-glass relative flex h-full overflow-hidden">
+          {!leftSidebarOpen && (
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={toggleLeftSidebar}
+              className="absolute left-4 top-4 z-20 h-10 w-10 rounded-full bg-card/90"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          )}
+
+          {!rightSidebarOpen && (
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={toggleRightSidebar}
+              className="absolute right-4 top-4 z-20 h-10 w-10 rounded-full bg-card/90"
+            >
+              <Sparkles className="h-4 w-4" />
+            </Button>
+          )}
+
+          <ResizablePanelGroup direction="horizontal" className="flex-1 overflow-hidden">
+            {leftSidebarOpen && (
+              <>
+                <ResizablePanel defaultSize={20} minSize={12} maxSize={38} className="relative flex flex-col bg-surface/80">
+                  <Sidebar doc={docRef.current} />
+                </ResizablePanel>
+                <ResizableHandle className="w-px bg-white/8 hover:bg-primary/40" />
+              </>
+            )}
+            <ResizablePanel defaultSize={60} minSize={30} className="flex flex-col bg-editor">
+              <div className="flex-1 overflow-hidden">
+                <MonacoEditor
+                  height="100%"
+                  language={getLanguageFromExtension(currentFileName)}
+                  onMount={handleEditorMount}
+                  theme="vs-dark"
+                  options={{
+                    minimap: { enabled: false },
+                    fontSize: 14,
+                    automaticLayout: true,
+                    readOnly: role === 'viewer',
+                    fontLigatures: true,
+                    scrollBeyondLastLine: false,
+                    smoothScrolling: true,
+                    padding: { top: 18, bottom: 18 },
+                    roundedSelection: true,
+                  }}
+                />
+              </div>
+              <div className="flex h-12 flex-wrap items-center justify-between gap-3 border-t border-white/8 bg-surface/85 px-4 text-xs font-medium text-muted-foreground">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                  <button
+                    onClick={toggleTerminal}
+                    className="rounded-full border border-white/8 bg-white/[0.04] px-3 py-1.5 text-foreground transition hover:border-primary/20 hover:bg-primary/10"
+                  >
+                    Terminal
+                  </button>
+                  <span className="flex items-center gap-2 rounded-full border border-white/8 bg-white/[0.03] px-3 py-1.5">
+                    <span className={`h-2 w-2 rounded-full ${isDocReady ? 'bg-success shadow-[0_0_12px_hsl(var(--success)/0.8)]' : 'bg-destructive'}`} />
+                    {isDocReady ? 'Synced' : 'Connecting'}
+                  </span>
+                  <span className="rounded-full border border-white/8 bg-white/[0.03] px-3 py-1.5">
+                    {onlineUsers} active
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                  <span className="rounded-full border border-white/8 bg-white/[0.03] px-3 py-1.5">
+                    {getLanguageFromExtension(currentFileName)}
+                  </span>
+                  <span className="rounded-full border border-white/8 bg-white/[0.03] px-3 py-1.5">
+                    {currentFileName}
+                  </span>
+                  <span className="rounded-full border border-white/8 bg-white/[0.03] px-3 py-1.5">
+                    {role}
+                  </span>
+                </div>
+              </div>
+              {terminalOpen ? (
+                <div className="relative h-56 border-t border-white/8 bg-editor">
+                  <Terminal doc={docRef.current} />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={toggleTerminal}
+                    className="absolute right-3 top-3 z-10 rounded-full bg-card/70"
+                  >
+                    <ChevronUp className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : null}
+            </ResizablePanel>
+            {rightSidebarOpen && (
+              <>
+                <ResizableHandle className="w-px bg-white/8 hover:bg-primary/40" />
+                <ResizablePanel defaultSize={24} minSize={18} maxSize={38} className="relative flex flex-col bg-surface/80">
+                  <AIChat doc={docRef.current} />
+                </ResizablePanel>
+              </>
+            )}
+          </ResizablePanelGroup>
+        </div>
+      </div>
     </div>
   );
 };

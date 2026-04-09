@@ -1,32 +1,38 @@
-import { useState, useEffect } from 'react';
-import { Send, Sparkles } from 'lucide-react';
-import { useEditorStore, ChatMessage } from '@/store/editorStore';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import * as Y from 'yjs';
+import { useEffect, useState } from "react";
+import { BookOpen, Bug, Send, Sparkles, Wand2 } from "lucide-react";
+import * as Y from "yjs";
+
+import { useEditorStore, type ChatMessage } from "@/store/editorStore";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface AIChatProps {
   doc: Y.Doc | null;
 }
 
+const quickActions = [
+  { label: "Explain", icon: BookOpen },
+  { label: "Refactor", icon: Wand2 },
+  { label: "Debug", icon: Bug },
+  { label: "Ideas", icon: Sparkles },
+];
+
 const AIChat = ({ doc }: AIChatProps) => {
-  const { chatMessages, setChatMessages } = useEditorStore();
-  const [message, setMessage] = useState('');
+  const { chatMessages, setChatMessages, currentFile } = useEditorStore();
+  const [message, setMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
 
   useEffect(() => {
     if (!doc) return;
-    const chatArray = doc.getArray<ChatMessage>('chat');
-    
-    // Initial load
+    const chatArray = doc.getArray<ChatMessage>("chat");
+
     setChatMessages(chatArray.toArray());
 
-    // Observe changes from websockets
     const observer = () => {
       setChatMessages(chatArray.toArray());
     };
-    
+
     chatArray.observe(observer);
     return () => chatArray.unobserve(observer);
   }, [doc, setChatMessages]);
@@ -34,64 +40,70 @@ const AIChat = ({ doc }: AIChatProps) => {
   const fetchAIResponse = async (userText: string, actionType?: string) => {
     if (!doc) return;
     setIsTyping(true);
-    
+
     try {
-      const currentCode = doc.getText('monaco').toString() || '/* No code in editor */';
+      const currentCode =
+        currentFile && doc ? doc.getText(`file:${currentFile}`).toString() || "/* No code in editor */" : "/* No code in editor */";
       let prompt = userText;
-      
+
       if (actionType) {
-        prompt = `Please ${actionType.toLowerCase()} the following code context. \nUser Request: ${userText}`;
+        prompt = `Please ${actionType.toLowerCase()} the following code context. User request: ${userText || "Use the current file."}`;
       }
 
-      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
+      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_GROQ_API_KEY}`
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_GROQ_API_KEY}`,
         },
         body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
+          model: "llama-3.3-70b-versatile",
           messages: [
             {
-              role: 'system',
-              content: 'You are a helpful AI coding assistant in a collaborative editor called CodeColab. Keep your responses concise, highly technical, and immediately actionable. Format your code snippets nicely using markdown.'
+              role: "system",
+              content:
+                "You are a helpful AI coding assistant in a collaborative editor called CodeColab. Keep responses concise, technical, and actionable. Format code snippets with markdown fences.",
             },
             {
-              role: 'user',
-              content: `${prompt}\n\n### Current Editor Code ###\n\`\`\`\n${currentCode}\n\`\`\``
-            }
-          ]
-        })
+              role: "user",
+              content: `${prompt}\n\n### Current Editor Code ###\n\`\`\`\n${currentCode}\n\`\`\``,
+            },
+          ],
+        }),
       });
 
       const data = await response.json();
-      if (data.error) throw new Error(data.error.message || 'Groq API error');
-      
-      const aiText = data.choices?.[0]?.message?.content || 'I could not generate a response.';
-      
+      if (data.error) throw new Error(data.error.message || "Groq API error");
+
+      const aiText = data.choices?.[0]?.message?.content || "I could not generate a response.";
+
       const aiMessage: ChatMessage = {
         id: Date.now().toString(),
-        user: 'CodeColab AI',
+        user: "CodeColab AI",
         message: aiText,
         isAI: true,
-        timestamp: new Date().toLocaleTimeString('en-US', {
-          hour: 'numeric',
-          minute: '2-digit',
+        timestamp: new Date().toLocaleTimeString("en-US", {
+          hour: "numeric",
+          minute: "2-digit",
           hour12: true,
         }),
       };
-      
-      doc.getArray<ChatMessage>('chat').push([aiMessage]);
+
+      doc.getArray<ChatMessage>("chat").push([aiMessage]);
     } catch (error: any) {
       console.error(error);
-      const errorMessage: ChatMessage = {
-        id: Date.now().toString(),
-        user: 'System',
-        message: `Error connecting to AI: ${error.message}`,
-        isAI: true,
-        timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
-      };
-      doc.getArray<ChatMessage>('chat').push([errorMessage]);
+      doc.getArray<ChatMessage>("chat").push([
+        {
+          id: Date.now().toString(),
+          user: "System",
+          message: `Error connecting to AI: ${error.message}`,
+          isAI: true,
+          timestamp: new Date().toLocaleTimeString("en-US", {
+            hour: "numeric",
+            minute: "2-digit",
+          }),
+        },
+      ]);
     } finally {
       setIsTyping(false);
     }
@@ -101,163 +113,177 @@ const AIChat = ({ doc }: AIChatProps) => {
     const textToProcess = message.trim();
     if (!textToProcess || !doc) return;
 
-    const chatArray = doc.getArray<ChatMessage>('chat');
-    
-    const timestamp = new Date().toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
+    const timestamp = new Date().toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
       hour12: true,
     });
 
-    const newMessage: ChatMessage = {
-      id: Date.now().toString(),
-      user: 'You',
-      message: textToProcess,
-      timestamp,
-    };
+    doc.getArray<ChatMessage>("chat").push([
+      {
+        id: Date.now().toString(),
+        user: "You",
+        message: textToProcess,
+        timestamp,
+      },
+    ]);
 
-    chatArray.push([newMessage]);
-    setMessage('');
-    
-    // Always trigger AI for now as a demo
+    setMessage("");
     await fetchAIResponse(textToProcess);
   };
-  
+
   const handleQuickAction = async (actionLabel: string) => {
     if (!doc) return;
-    const timestamp = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-    
-    doc.getArray<ChatMessage>('chat').push([{
-      id: Date.now().toString(),
-      user: 'You',
-      message: `Triggered quick action: ${actionLabel}`,
-      timestamp
-    }]);
-    
-    await fetchAIResponse('', actionLabel);
+
+    const timestamp = new Date().toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+
+    doc.getArray<ChatMessage>("chat").push([
+      {
+        id: Date.now().toString(),
+        user: "You",
+        message: `Triggered quick action: ${actionLabel}`,
+        timestamp,
+      },
+    ]);
+
+    await fetchAIResponse("", actionLabel);
   };
 
-  const quickActions = [
-    { label: 'Explain', icon: '📖' },
-    { label: 'Optimize', icon: '⚡' },
-    { label: 'Debug', icon: '🐛' },
-    { label: 'Test', icon: '✅' },
-  ];
-
   return (
-    <div className="h-full bg-surface border-l border-border flex flex-col">
-      <div className="p-3 border-b border-border flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-primary" />
-          <span className="text-sm font-medium text-foreground">AI Assistant & Chat</span>
+    <div className="flex h-full min-h-0 flex-col bg-surface/80">
+      <div className="border-b border-white/8 px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Assistant</p>
+            <div className="mt-1 flex items-center gap-2 text-sm font-semibold text-foreground">
+              <Sparkles className="h-4 w-4 text-primary" />
+              AI + room chat
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => useEditorStore.getState().toggleRightSidebar()}
+            className="h-9 w-9 rounded-2xl"
+          >
+            <span className="text-lg leading-none">&times;</span>
+          </Button>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => useEditorStore.getState().toggleRightSidebar()}
-          className="h-6 w-6 p-0 hover:bg-muted"
-        >
-          <span className="text-xs">&times;</span>
-        </Button>
       </div>
 
-      <div className="p-3 border-b border-border">
-        <div className="flex gap-2 flex-wrap">
+      <div className="border-b border-white/8 px-4 py-3">
+        <div className="flex flex-wrap gap-2">
           {quickActions.map((action) => (
             <Button
               key={action.label}
               variant="outline"
               size="sm"
               onClick={() => handleQuickAction(action.label)}
-              className="text-xs bg-background border-border hover:bg-muted"
+              className="rounded-full px-3"
             >
-              <span className="mr-1">{action.icon}</span>
+              <action.icon className="h-3.5 w-3.5" />
               {action.label}
             </Button>
           ))}
         </div>
       </div>
 
-      <ScrollArea className="flex-1 p-3">
-        <div className="space-y-4">
-          {chatMessages.map((msg) => (
-            <div key={msg.id} className="space-y-1">
-              <div className="flex items-baseline gap-2">
-                <span
-                  className={`text-xs font-medium ${
-                    msg.isAI ? 'text-primary' : 'text-foreground'
+      <ScrollArea className="flex-1 px-4 py-4">
+        {chatMessages.length === 0 ? (
+          <div className="panel-subtle flex h-full min-h-[16rem] flex-col items-center justify-center gap-3 p-6 text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/12 text-primary">
+              <Sparkles className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="font-display text-xl font-semibold text-foreground">Ask for a real edit, not generic tips.</p>
+              <p className="mt-2 text-sm leading-7 text-muted-foreground">
+                Use the quick actions or send a prompt tied to the current file. The assistant now reads from the active file content.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {chatMessages.map((msg) => (
+              <div key={msg.id} className="space-y-2">
+                <div className="flex items-center gap-2 text-xs">
+                  <span className={`font-semibold ${msg.isAI ? "text-primary" : "text-foreground"}`}>{msg.user}</span>
+                  <span className="text-muted-foreground">{msg.timestamp}</span>
+                </div>
+                <div
+                  className={`rounded-[1.35rem] border p-4 text-sm leading-7 ${
+                    msg.isAI
+                      ? "border-primary/15 bg-primary/10 text-foreground"
+                      : "border-white/8 bg-white/[0.03] text-foreground/92"
                   }`}
                 >
-                  {msg.user}
-                </span>
-                <span className="text-xs text-muted-foreground">{msg.timestamp}</span>
-              </div>
-              <div
-                className={`text-sm p-3 rounded-lg overflow-hidden ${
-                  msg.isAI
-                    ? 'bg-muted border border-primary/20'
-                    : 'bg-background border border-border'
-                }`}
-              >
-                {msg.message.split(/(```[\s\S]*?```)/g).map((part, index) => {
-                  if (part.startsWith('```') && part.endsWith('```')) {
-                    const lines = part.slice(3, -3).split('\n');
-                    const language = lines[0].trim();
-                    // Handle edge case where first line has no content and just code starts immediately
-                    const code = lines.slice(1).join('\n').trim() || lines[0];
-                    
-                    return (
-                      <div key={index} className="relative my-2 rounded border border-border group bg-card">
-                        <div className="flex items-center justify-between px-2 py-1 bg-surface border-b border-border">
-                          <span className="text-[10px] text-muted-foreground uppercase">{language || 'CODE'}</span>
-                          <Button
-                            variant="default"
-                            size="sm"
-                            className="h-5 text-[10px] px-2 opacity-0 group-hover:opacity-100 transition-opacity bg-primary"
-                            onClick={() => {
-                              if (doc) {
-                                doc.transact(() => {
-                                  const text = doc.getText('monaco');
-                                  text.delete(0, text.length);
-                                  text.insert(0, code);
-                                });
-                              }
-                            }}
-                          >
-                            Apply to Editor
-                          </Button>
+                  {msg.message.split(/(```[\s\S]*?```)/g).map((part, index) => {
+                    if (part.startsWith("```") && part.endsWith("```")) {
+                      const lines = part.slice(3, -3).split("\n");
+                      const language = lines[0].trim();
+                      const code = lines.slice(1).join("\n").trim() || lines[0];
+
+                      return (
+                        <div key={index} className="my-3 overflow-hidden rounded-2xl border border-white/8 bg-editor">
+                          <div className="flex items-center justify-between border-b border-white/8 px-3 py-2">
+                            <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                              {language || "CODE"}
+                            </span>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              className="h-7 rounded-full px-3 text-[11px]"
+                              onClick={() => {
+                                if (doc && currentFile) {
+                                  doc.transact(() => {
+                                    const text = doc.getText(`file:${currentFile}`);
+                                    text.delete(0, text.length);
+                                    text.insert(0, code);
+                                  });
+                                }
+                              }}
+                            >
+                              Apply to file
+                            </Button>
+                          </div>
+                          <pre className="overflow-x-auto p-3 text-xs text-foreground">{code}</pre>
                         </div>
-                        <pre className="p-2 overflow-x-auto text-xs font-mono font-medium text-foreground">
-                          {code}
-                        </pre>
-                      </div>
+                      );
+                    }
+
+                    return (
+                      <span key={index} className="block whitespace-pre-wrap">
+                        {part}
+                      </span>
                     );
-                  }
-                  return <span key={index} className="whitespace-pre-wrap font-sans block">{part}</span>;
-                })}
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
-          {isTyping && (
-             <div className="flex items-center gap-2 p-2">
-               <Sparkles className="w-4 h-4 text-primary animate-pulse" />
-               <span className="text-xs text-muted-foreground animate-pulse">AI is thinking...</span>
-             </div>
-          )}
-        </div>
+            ))}
+
+            {isTyping ? (
+              <div className="flex items-center gap-3 rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3 text-sm text-muted-foreground">
+                <Sparkles className="h-4 w-4 animate-pulse text-primary" />
+                AI is thinking...
+              </div>
+            ) : null}
+          </div>
+        )}
       </ScrollArea>
 
-      <div className="p-3 border-t border-border">
+      <div className="border-t border-white/8 p-4">
         <div className="flex gap-2">
           <Input
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-            placeholder="Ask AI or chat with team..."
-            className="bg-background border-border"
+            onKeyDown={(e) => e.key === "Enter" && handleSend()}
+            placeholder="Ask AI to explain, refactor, or debug the active file..."
           />
-          <Button onClick={handleSend} size="icon" className="bg-gradient-primary">
-            <Send className="w-4 h-4" />
+          <Button onClick={handleSend} size="icon" className="accent-ring">
+            <Send className="h-4 w-4" />
           </Button>
         </div>
       </div>
