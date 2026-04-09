@@ -1,98 +1,137 @@
-# 🚀 CodeColab: Real-Time Collaborative Workspace
+# CodeColab
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
-![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
-![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)
-![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=for-the-badge&logo=mongodb&logoColor=white)
-![Socket.io](https://img.shields.io/badge/Socket.io-010101?style=for-the-badge&logo=socketdotio&logoColor=white)
+Minimal, dark, collaborative coding.
 
-**CodeColab** is a production-grade, real-time collaborative code editor designed for high-performance pair programming, technical interviews, and team syncs. Built with deep integration for **Yjs** and **MongoDB Atlas**, it ensures your code is never lost and always synchronized.
+CodeColab is a real-time coding workspace built around three things:
 
----
+- shared editing with Yjs
+- inline AI help inside the editor
+- safe execution with checkpoints and restore flow
 
-## ✨ Key Features
+The app is split into a Vite + React frontend and an Express + Socket.IO backend.
 
-- **🔄 Real-Time Synchronization**: Powered by **Yjs** and WebSockets for conflict-free, sub-millisecond document synchronization.
-- **🤖 AI Assistant**: Integrated **Llama 3.3 (via Groq)** for instant code explanation, optimization, and debugging directly in the sidebar.
-- **💾 Production Persistence**: All document states are securely stored in **MongoDB Atlas** with binary update retention and plain-text fallback backups.
-- **🖥️ Local Execution Engine**: Run your code (Python, JavaScript, etc.) directly on the host machine with a secure, timed execution environment.
-- **🔐 Secure Authentication**: Full user lifecycle management with **JWT-based** sessions and hashed password security.
-- **🌓 Modern Aesthetics**: A sleek, premium dark-mode interface built with **Tailwind CSS** and **shadcn/ui**.
+## Stack
 
----
+- React 18
+- TypeScript
+- Vite
+- Tailwind CSS
+- Framer Motion
+- Monaco Editor
+- Yjs
+- Socket.IO
+- Express
+- MongoDB / `mongodb-memory-server`
 
-## 🛠️ Tech Stack
+## What It Includes
 
-- **Frontend**: React 18, Vite, TypeScript, Tailwind CSS, Framer Motion.
-- **Backend**: Node.js, Express.js, Socket.io.
-- **Database**: MongoDB Atlas (Mongoose).
-- **Collaboration**: Yjs, `y-websocket`, `y-mongodb-provider`.
-- **Infrastructure**: Piston-style local code runner.
+- real-time collaborative editing
+- presence and active-user indicators
+- AI chat inside the editor sidebar
+- code execution from the workspace
+- checkpoint history and restore actions
+- auth with access + refresh token flow
 
----
+## Local Setup
 
-## 🚀 Getting Started
+### 1. Install dependencies
 
-### Prerequisites
+```bash
+npm install
+cd server && npm install
+```
 
-- **Node.js** (v18 or higher)
-- **MongoDB Atlas** account and cluster.
-- **Groq API Key** (for AI Assistant).
+### 2. Configure environment
 
-### Installation
+Frontend `.env` in the project root:
 
-1. **Clone and Install**
-   ```bash
-   git clone https://github.com/ArnevGaur/park-code-space-main.git
-   cd park-code-space-main
-   npm install
-   ```
+```env
+VITE_GROQ_API_KEY=your_groq_api_key
+```
 
-2. **Configure Environment**
-   Create a `.env` file in the **root** folder for the frontend:
-   ```env
-   VITE_GROQ_API_KEY=your_groq_key_here
-   ```
+Backend `server/.env`:
 
-   Create a `.env` file in the **server** folder for the backend:
-   ```env
-   PORT=5005
-   MONGODB_URI=your_mongodb_atlas_uri
-   JWT_SECRET=your_secret_key
-   ```
+```env
+PORT=5005
+JWT_SECRET=your_jwt_secret_here
+REFRESH_SECRET=your_refresh_secret_here
+MONGODB_URI=
+```
 
-3. **Run the Application**
-   ```bash
-   npm run start:all
-   ```
-   The app will be available at `http://localhost:8080`.
+Notes:
 
----
+- frontend runs on `http://localhost:8080`
+- backend runs on `http://localhost:5005`
+- if `MONGODB_URI` is empty, the backend falls back to an in-memory MongoDB instance
+- `REFRESH_SECRET` is recommended even though the server has a development fallback
 
-## 📐 Architecture
+### 3. Start the app
 
-CodeColab uses a dual-persistence strategy:
-1. **Binary Persistence**: The full Yjs document history is stored as binary blobs in MongoDB, allowing for perfect restoration of cursors, undo/redo states, and shared types.
-2. **Snapshot Persistence**: A human-readable `lastContent` field is debounced and updated in the Room collection, providing a failsafe recovery path.
+Run the backend:
 
----
+```bash
+npm run server
+```
 
-## 🤝 Contributing
+In a second terminal, run the frontend:
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+```bash
+npm run dev
+```
 
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+Then open:
 
----
+```text
+http://localhost:8080
+```
 
-## 📄 License
+## Scripts
 
-Distributed under the MIT License. See `LICENSE` for more information.
+Frontend:
 
-<p align="center">
-  Developed with ❤️ by the CodeColab Team
-</p>
+```bash
+npm run dev
+npm run build
+npm run preview
+npm run lint
+```
+
+Backend:
+
+```bash
+npm run server
+```
+
+`npm run start:all` exists, but the most reliable local setup is still running frontend and backend in separate terminals.
+
+## Project Shape
+
+```text
+.
+├── src/                # frontend app
+├── public/             # static assets
+├── server/             # express api, auth, execution, yjs persistence
+└── vite.config.ts      # frontend dev server + proxy
+```
+
+## Architecture
+
+The frontend handles the product surface: auth, dashboard, editor, AI panel, terminal, and history.
+
+The backend handles auth, room APIs, checkpoint storage, execution requests, Socket.IO, and Yjs persistence.
+
+For persistence, the server uses MongoDB when available and falls back to `mongodb-memory-server` for local development.
+
+## Build Status
+
+Production build:
+
+```bash
+npm run build
+```
+
+The app currently builds successfully with Vite.
+
+## License
+
+MIT
