@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { FolderGit2, LogOut, Share2, Sparkles, Terminal, Users } from "lucide-react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 
 import BrandMark from "@/components/layout/BrandMark";
 import { useEditorStore } from "@/store/editorStore";
@@ -10,6 +11,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 
 const TopBar = () => {
   const [showShareModal, setShowShareModal] = useState(false);
+  const navigate = useNavigate();
   const {
     role,
     setRole,
@@ -29,7 +31,7 @@ const TopBar = () => {
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-    window.location.href = "/login";
+    navigate("/login");
   };
 
   const getFileName = (fileId?: string) => {
@@ -48,7 +50,8 @@ const TopBar = () => {
               <div className="rounded-full border border-white/8 bg-white/[0.04] px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">
                 Collaborative room
               </div>
-              <div className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">
+              <div className="flex items-center gap-2 rounded-full border border-[hsl(var(--success)/0.22)] bg-[hsl(var(--success)/0.1)] px-2.5 py-1 text-[11px] font-semibold text-[hsl(var(--success))]">
+                <span className="h-2 w-2 rounded-full bg-success shadow-[0_0_10px_hsl(var(--success)/0.78)]" />
                 {onlineUsers.length || 1} active now
               </div>
             </div>
@@ -111,7 +114,7 @@ const TopBar = () => {
                           style={{ backgroundColor: user.color }}
                         >
                           {user.name.charAt(0).toUpperCase()}
-                          <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border border-editor bg-success" />
+                          <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border border-editor bg-success shadow-[0_0_10px_hsl(var(--success)/0.8)]" />
                         </motion.div>
                       </TooltipTrigger>
                       <TooltipContent side="bottom" className="max-w-[15rem] border-white/10 bg-card/95 text-xs">

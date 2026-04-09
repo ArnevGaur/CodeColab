@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import MonacoEditor from '@monaco-editor/react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronRight, ChevronUp, Sparkles } from 'lucide-react';
 import { useEditorStore } from '@/store/editorStore';
 import { Button } from '@/components/ui/button';
 import TopBar from '@/components/editor/TopBar';
 import Sidebar from '@/components/editor/Sidebar';
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 import AIChat from '@/components/editor/AIChat';
 import Terminal from '@/components/editor/Terminal';
 import * as Y from 'yjs';
@@ -345,86 +345,129 @@ const EditorPage = () => {
             </Button>
           )}
 
-          <ResizablePanelGroup direction="horizontal" className="flex-1 overflow-hidden">
-            {leftSidebarOpen && (
-              <>
-                <ResizablePanel defaultSize={20} minSize={12} maxSize={38} className="relative flex flex-col bg-surface/80">
-                  <Sidebar doc={docRef.current} />
-                </ResizablePanel>
-                <ResizableHandle className="w-px bg-white/8 hover:bg-primary/40" />
-              </>
-            )}
-            <ResizablePanel defaultSize={60} minSize={30} className="flex flex-col bg-editor">
-              <div className="flex-1 overflow-hidden">
-                <MonacoEditor
-                  height="100%"
-                  language={getLanguageFromExtension(currentFileName)}
-                  onMount={handleEditorMount}
-                  theme="vs-dark"
-                  options={{
-                    minimap: { enabled: false },
-                    fontSize: 14,
-                    automaticLayout: true,
-                    readOnly: role === 'viewer',
-                    fontLigatures: true,
-                    scrollBeyondLastLine: false,
-                    smoothScrolling: true,
-                    padding: { top: 18, bottom: 18 },
-                    roundedSelection: true,
-                  }}
-                />
-              </div>
-              <div className="flex h-12 flex-wrap items-center justify-between gap-3 border-t border-white/8 bg-surface/85 px-4 text-xs font-medium text-muted-foreground">
-                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                  <button
-                    onClick={toggleTerminal}
-                    className="rounded-full border border-white/8 bg-white/[0.04] px-3 py-1.5 text-foreground transition hover:border-primary/20 hover:bg-primary/10"
-                  >
-                    Terminal
-                  </button>
-                  <span className="flex items-center gap-2 rounded-full border border-white/8 bg-white/[0.03] px-3 py-1.5">
-                    <span className={`h-2 w-2 rounded-full ${isDocReady ? 'bg-success shadow-[0_0_12px_hsl(var(--success)/0.8)]' : 'bg-destructive'}`} />
-                    {isDocReady ? 'Synced' : 'Connecting'}
-                  </span>
-                  <span className="rounded-full border border-white/8 bg-white/[0.03] px-3 py-1.5">
-                    {onlineUsers} active
-                  </span>
+          <div className="flex min-w-0 flex-1 overflow-hidden">
+            <motion.aside
+              initial={false}
+              animate={{
+                width: leftSidebarOpen ? 304 : 0,
+                opacity: leftSidebarOpen ? 1 : 0,
+              }}
+              transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
+              className={`relative shrink-0 overflow-hidden border-r border-white/8 bg-surface/80 ${
+                leftSidebarOpen ? '' : 'pointer-events-none border-r-transparent'
+              }`}
+            >
+              <motion.div
+                initial={false}
+                animate={{ x: leftSidebarOpen ? 0 : -18, opacity: leftSidebarOpen ? 1 : 0 }}
+                transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                className="h-full w-[19rem]"
+              >
+                <Sidebar doc={docRef.current} />
+              </motion.div>
+            </motion.aside>
+
+            <div className="flex min-w-0 flex-1 flex-col bg-editor">
+                <div className="flex-1 overflow-hidden">
+                  <MonacoEditor
+                    height="100%"
+                    language={getLanguageFromExtension(currentFileName)}
+                    onMount={handleEditorMount}
+                    theme="vs-dark"
+                    options={{
+                      minimap: { enabled: false },
+                      fontSize: 14,
+                      automaticLayout: true,
+                      readOnly: role === 'viewer',
+                      fontLigatures: true,
+                      scrollBeyondLastLine: false,
+                      smoothScrolling: true,
+                      padding: { top: 18, bottom: 18 },
+                      roundedSelection: true,
+                    }}
+                  />
                 </div>
-                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                  <span className="rounded-full border border-white/8 bg-white/[0.03] px-3 py-1.5">
-                    {getLanguageFromExtension(currentFileName)}
-                  </span>
-                  <span className="rounded-full border border-white/8 bg-white/[0.03] px-3 py-1.5">
-                    {currentFileName}
-                  </span>
-                  <span className="rounded-full border border-white/8 bg-white/[0.03] px-3 py-1.5">
-                    {role}
-                  </span>
+                <div className="flex h-10 flex-wrap items-center justify-between gap-2 border-t border-white/8 bg-surface/85 px-3 text-[11px] font-medium text-muted-foreground">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                    <button
+                      onClick={toggleTerminal}
+                      className="rounded-full border border-white/8 bg-white/[0.04] px-2.5 py-1 text-foreground transition hover:border-primary/20 hover:bg-primary/10"
+                    >
+                      Terminal
+                    </button>
+                    <span
+                      className={`flex items-center gap-2 rounded-full px-2.5 py-1 ${
+                        isDocReady
+                          ? 'border border-[hsl(var(--success)/0.28)] bg-[hsl(var(--success)/0.12)] text-[hsl(var(--success))]'
+                          : 'border border-white/8 bg-white/[0.03] text-muted-foreground'
+                      }`}
+                    >
+                      <span className={`h-2 w-2 rounded-full ${isDocReady ? 'bg-success shadow-[0_0_12px_hsl(var(--success)/0.8)]' : 'bg-destructive'}`} />
+                      {isDocReady ? 'Synced' : 'Connecting'}
+                    </span>
+                    <span className="flex items-center gap-2 rounded-full border border-[hsl(var(--success)/0.2)] bg-[hsl(var(--success)/0.1)] px-2.5 py-1 text-[hsl(var(--success))]">
+                      <span className="h-2 w-2 rounded-full bg-success shadow-[0_0_10px_hsl(var(--success)/0.75)]" />
+                      {onlineUsers} active
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                    <span className="rounded-full border border-white/8 bg-white/[0.03] px-2.5 py-1">
+                      {getLanguageFromExtension(currentFileName)}
+                    </span>
+                    <span className="rounded-full border border-white/8 bg-white/[0.03] px-2.5 py-1">
+                      {currentFileName}
+                    </span>
+                    <span className="rounded-full border border-white/8 bg-white/[0.03] px-2.5 py-1">
+                      {role}
+                    </span>
+                  </div>
                 </div>
-              </div>
-              {terminalOpen ? (
-                <div className="relative h-56 border-t border-white/8 bg-editor">
-                  <Terminal doc={docRef.current} />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={toggleTerminal}
-                    className="absolute right-3 top-3 z-10 rounded-full bg-card/70"
-                  >
-                    <ChevronUp className="h-4 w-4" />
-                  </Button>
-                </div>
-              ) : null}
-            </ResizablePanel>
-            {rightSidebarOpen && (
-              <>
-                <ResizableHandle className="w-px bg-white/8 hover:bg-primary/40" />
-                <ResizablePanel defaultSize={24} minSize={18} maxSize={38} className="relative flex flex-col bg-surface/80">
-                  <AIChat doc={docRef.current} />
-                </ResizablePanel>
-              </>
-            )}
-          </ResizablePanelGroup>
+                <AnimatePresence initial={false}>
+                  {terminalOpen ? (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 160, opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                      className="relative overflow-hidden border-t border-white/8 bg-editor"
+                    >
+                      <div className="relative h-40">
+                        <Terminal doc={docRef.current} />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={toggleTerminal}
+                          className="absolute right-3 top-3 z-10 rounded-full bg-card/70"
+                        >
+                          <ChevronUp className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </motion.div>
+                  ) : null}
+                </AnimatePresence>
+            </div>
+
+            <motion.aside
+              initial={false}
+              animate={{
+                width: rightSidebarOpen ? 336 : 0,
+                opacity: rightSidebarOpen ? 1 : 0,
+              }}
+              transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
+              className={`relative shrink-0 overflow-hidden border-l border-white/8 bg-surface/80 ${
+                rightSidebarOpen ? '' : 'pointer-events-none border-l-transparent'
+              }`}
+            >
+              <motion.div
+                initial={false}
+                animate={{ x: rightSidebarOpen ? 0 : 18, opacity: rightSidebarOpen ? 1 : 0 }}
+                transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                className="h-full w-[21rem]"
+              >
+                <AIChat doc={docRef.current} />
+              </motion.div>
+            </motion.aside>
+          </div>
         </div>
       </div>
     </div>

@@ -142,26 +142,26 @@ const Terminal = ({ doc }: TerminalProps) => {
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-editor text-sm font-mono text-foreground">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/8 bg-surface/85 px-4 py-3">
+    <div className="flex h-full min-h-0 flex-col bg-editor text-xs font-mono text-foreground">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/8 bg-surface/85 px-3 py-2">
         <div>
-          <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-foreground">
             <TerminalIcon className="h-4 w-4 text-primary" />
             Terminal
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">Run the active file or specify one directly.</p>
+          <p className="mt-1 text-[11px] text-muted-foreground">Run the active file or specify one directly.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button
             variant={showStdin ? "secondary" : "ghost"}
             size="sm"
             onClick={() => setShowStdin(!showStdin)}
-            className="rounded-full px-3"
+            className="h-7 rounded-full px-2.5 text-[11px]"
           >
             {showStdin ? "Hide stdin" : "Program input"}
           </Button>
           {isExecuting ? (
-            <div className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+            <div className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-primary">
               Running...
             </div>
           ) : null}
@@ -169,7 +169,7 @@ const Terminal = ({ doc }: TerminalProps) => {
       </div>
 
       {showStdin ? (
-        <div className="border-b border-white/8 bg-surface/70 p-4">
+        <div className="border-b border-white/8 bg-surface/70 p-3">
           <p className="mb-2 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
             Program Input Buffer
           </p>
@@ -177,13 +177,13 @@ const Terminal = ({ doc }: TerminalProps) => {
             value={stdin}
             onChange={(e) => setStdin(e.target.value)}
             placeholder={"One line per input call\nEx: Arnev\n25"}
-            className="min-h-[88px] font-mono text-xs"
+            className="min-h-[64px] font-mono text-xs"
           />
         </div>
       ) : null}
 
       <ScrollArea className="flex-1">
-        <div className="space-y-2 p-4">
+        <div className="space-y-1.5 p-3">
           {history.map((line, index) => (
             <div
               key={`${line}-${index}`}
@@ -202,12 +202,12 @@ const Terminal = ({ doc }: TerminalProps) => {
         </div>
       </ScrollArea>
 
-      <div className="border-t border-white/8 bg-surface/85 px-4 py-3">
-        <div className="flex items-center gap-3 rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3">
+      <div className="border-t border-white/8 bg-surface/85 px-3 py-2">
+        <div className="flex items-center gap-2 rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2">
           <span className="select-none text-primary">$</span>
           <input
             autoFocus
-            className="w-full flex-1 bg-transparent text-foreground outline-none placeholder:text-muted-foreground"
+            className="w-full flex-1 bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {

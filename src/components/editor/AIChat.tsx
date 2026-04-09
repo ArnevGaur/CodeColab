@@ -1,22 +1,17 @@
 import { useEffect, useState } from "react";
-import { BookOpen, Bug, Send, Sparkles, Wand2 } from "lucide-react";
+import { Bot, Eraser, Send, Sparkles } from "lucide-react";
 import * as Y from "yjs";
 
 import { useEditorStore, type ChatMessage } from "@/store/editorStore";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 interface AIChatProps {
   doc: Y.Doc | null;
 }
-
-const quickActions = [
-  { label: "Explain", icon: BookOpen },
-  { label: "Refactor", icon: Wand2 },
-  { label: "Debug", icon: Bug },
-  { label: "Ideas", icon: Sparkles },
-];
 
 const MAX_CONTEXT_MESSAGES = 10;
 
@@ -30,15 +25,26 @@ function buildConversationHistory(messages: ChatMessage[]) {
     }));
 }
 
+function createTimestamp() {
+  return new Date().toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
 const AIChat = ({ doc }: AIChatProps) => {
-  const { chatMessages, setChatMessages, currentFile } = useEditorStore();
+  const { chatMessages, setChatMessages, currentFile, files } = useEditorStore();
+  const { toast } = useToast();
   const [message, setMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
 
+  const activeFileName = files.find((file) => file.id === currentFile)?.name || "Untitled";
+
   useEffect(() => {
     if (!doc) return;
-    const chatArray = doc.getArray<ChatMessage>("chat");
 
+    const chatArray = doc.getArray<ChatMessage>("chat");
     setChatMessages(chatArray.toArray());
 
     const observer = () => {
@@ -49,15 +55,32 @@ const AIChat = ({ doc }: AIChatProps) => {
     return () => chatArray.unobserve(observer);
   }, [doc, setChatMessages]);
 
-  const fetchAIResponse = async (userText: string, actionType?: string) => {
+  const pushMessage = (nextMessage: ChatMessage) => {
     if (!doc) return;
+    doc.getArray<ChatMessage>("chat").push([nextMessage]);
+  };
+
+  const fetchAIResponse = async (userText: string) => {
+    if (!doc) return;
+
+    const apiKey = import.meta.env.VITE_GROQ_API_KEY;
+    if (!apiKey) {
+      pushMessage({
+        id: Date.now().toString(),
+        user: "System",
+        message: "AI is unavailable because `VITE_GROQ_API_KEY` is missing.",
+        isAI: true,
+        timestamp: createTimestamp(),
+      });
+      return;
+    }
+
     setIsTyping(true);
 
     try {
       const currentCode =
         currentFile && doc ? doc.getText(`file:${currentFile}`).toString() || "/* No code in editor */" : "/* No code in editor */";
-      const activeFileName =
-        useEditorStore.getState().files.find((file) => file.id === currentFile)?.name || "Untitled";
+
       const chatSnapshot = doc.getArray<ChatMessage>("chat").toArray();
       const priorMessages =
         chatSnapshot.length > 0 && !chatSnapshot[chatSnapshot.length - 1].isAI
@@ -65,33 +88,27 @@ const AIChat = ({ doc }: AIChatProps) => {
           : chatSnapshot;
       const conversationHistory = buildConversationHistory(priorMessages);
 
-      let prompt = userText;
-
-      if (actionType) {
-        prompt = `Please ${actionType.toLowerCase()} the active file. ${userText ? `User request: ${userText}` : "Focus on the current code and be specific."}`;
-      }
-
       const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_GROQ_API_KEY}`,
+          Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
           model: "llama-3.3-70b-versatile",
+          temperature: 0.35,
           messages: [
             {
               role: "system",
               content:
-                "You are a helpful AI coding assistant in a collaborative editor called CodeColab. Continue the existing conversation naturally instead of restarting from scratch. Keep responses concise, technical, and actionable. When useful, reference the active file and current code. Format code snippets with markdown fences.",
+                "You are CodeColab AI inside a collaborative code editor. Continue the ongoing conversation naturally instead of restarting from scratch. Be specific, technical, and action-oriented. When useful, mention the active file and refer to the provided code. Keep answers compact unless the user asks for depth. Format code snippets with markdown fences.",
             },
             ...conversationHistory,
             {
               role: "user",
-              content: `Active file: ${activeFileName}\n\nUser request: ${prompt}\n\n### Current Editor Code ###\n\`\`\`\n${currentCode}\n\`\`\``,
+              content: `Active file: ${activeFileName}\n\nUser request: ${userText}\n\nCurrent file contents:\n\`\`\`\n${currentCode}\n\`\`\``,
             },
           ],
-          temperature: 0.35,
         }),
       });
 
@@ -104,214 +121,234 @@ const AIChat = ({ doc }: AIChatProps) => {
 
       const aiText = data.choices?.[0]?.message?.content || "I could not generate a response.";
 
-      const aiMessage: ChatMessage = {
+      pushMessage({
         id: Date.now().toString(),
         user: "CodeColab AI",
         message: aiText,
         isAI: true,
-        timestamp: new Date().toLocaleTimeString("en-US", {
-          hour: "numeric",
-          minute: "2-digit",
-          hour12: true,
-        }),
-      };
-
-      doc.getArray<ChatMessage>("chat").push([aiMessage]);
+        timestamp: createTimestamp(),
+      });
     } catch (error: any) {
       console.error(error);
-      doc.getArray<ChatMessage>("chat").push([
-        {
-          id: Date.now().toString(),
-          user: "System",
-          message: `Error connecting to AI: ${error.message}`,
-          isAI: true,
-          timestamp: new Date().toLocaleTimeString("en-US", {
-            hour: "numeric",
-            minute: "2-digit",
-          }),
-        },
-      ]);
+      pushMessage({
+        id: Date.now().toString(),
+        user: "System",
+        message: `Error connecting to AI: ${error.message}`,
+        isAI: true,
+        timestamp: createTimestamp(),
+      });
     } finally {
       setIsTyping(false);
     }
   };
 
   const handleSend = async () => {
-    const textToProcess = message.trim();
-    if (!textToProcess || !doc || isTyping) return;
+    const text = message.trim();
+    if (!text || !doc || isTyping) return;
 
-    const timestamp = new Date().toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
+    pushMessage({
+      id: Date.now().toString(),
+      user: "You",
+      message: text,
+      timestamp: createTimestamp(),
     });
-
-    doc.getArray<ChatMessage>("chat").push([
-      {
-        id: Date.now().toString(),
-        user: "You",
-        message: textToProcess,
-        timestamp,
-      },
-    ]);
 
     setMessage("");
-    await fetchAIResponse(textToProcess);
+    await fetchAIResponse(text);
   };
 
-  const handleQuickAction = async (actionLabel: string) => {
+  const handleClearChat = () => {
     if (!doc || isTyping) return;
 
-    const timestamp = new Date().toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
+    const chatArray = doc.getArray<ChatMessage>("chat");
+    if (chatArray.length === 0) return;
+
+    doc.transact(() => {
+      chatArray.delete(0, chatArray.length);
     });
 
-    doc.getArray<ChatMessage>("chat").push([
-      {
-        id: Date.now().toString(),
-        user: "You",
-        message: `Triggered quick action: ${actionLabel}`,
-        timestamp,
-      },
-    ]);
-
-    await fetchAIResponse("", actionLabel);
+    setMessage("");
+    toast({
+      title: "Chat cleared",
+      description: "The shared AI conversation has been reset.",
+    });
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-surface/80">
-      <div className="border-b border-white/8 px-4 py-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Assistant</p>
-            <div className="mt-1 flex items-center gap-2 text-sm font-semibold text-foreground">
-              <Sparkles className="h-4 w-4 text-primary" />
-              AI + room chat
+    <div className="flex h-full min-h-0 flex-col bg-surface/82">
+      <div className="border-b border-white/8 px-3 py-2.5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Assistant</p>
+            <div className="mt-1 flex items-center gap-2">
+              <div className="flex h-6 w-6 items-center justify-center rounded-md border border-white/8 bg-white/[0.04] text-primary">
+                <Bot className="h-3.5 w-3.5" />
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-[13px] font-semibold text-foreground">CodeColab AI Chat</p>
+                <p className="truncate text-[10px] text-muted-foreground">Working on {activeFileName}</p>
+              </div>
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => useEditorStore.getState().toggleRightSidebar()}
-            className="h-9 w-9 rounded-2xl"
-          >
-            <span className="text-lg leading-none">&times;</span>
-          </Button>
-        </div>
-      </div>
 
-      <div className="border-b border-white/8 px-4 py-3">
-        <div className="flex flex-wrap gap-2">
-          {quickActions.map((action) => (
+          <div className="flex items-center gap-2">
             <Button
-              key={action.label}
               variant="outline"
               size="sm"
-              onClick={() => handleQuickAction(action.label)}
-              className="rounded-full px-3"
+              onClick={handleClearChat}
+              disabled={chatMessages.length === 0 || isTyping}
+              className="h-7 rounded-full px-2 text-[10px]"
             >
-              <action.icon className="h-3.5 w-3.5" />
-              {action.label}
+              <Eraser className="h-3.5 w-3.5" />
+              Clear chat
             </Button>
-          ))}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => useEditorStore.getState().toggleRightSidebar()}
+              className="h-7 w-7 rounded-full"
+            >
+              <span className="text-base leading-none">&times;</span>
+            </Button>
+          </div>
         </div>
       </div>
 
-      <ScrollArea className="flex-1 px-4 py-4">
+      <ScrollArea className="flex-1">
         {chatMessages.length === 0 ? (
-          <div className="panel-subtle flex h-full min-h-[16rem] flex-col items-center justify-center gap-3 p-6 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/12 text-primary">
-              <Sparkles className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="font-display text-xl font-semibold text-foreground">Ask for a real edit, not generic tips.</p>
-              <p className="mt-2 text-sm leading-7 text-muted-foreground">
-                Use the quick actions or send a prompt tied to the current file. The assistant now reads from the active file content.
-              </p>
+          <div className="px-3 py-3 pr-4">
+            <div className="panel-subtle flex min-h-[11rem] flex-col items-center justify-center gap-3 p-4 text-center">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/8 bg-editor text-primary">
+                <Sparkles className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="font-display text-base font-semibold text-foreground">Start a real back-and-forth.</p>
+                <p className="mt-1.5 max-w-xs text-[11px] leading-5 text-muted-foreground">
+                  Ask for an explanation, a fix, or a refactor. The assistant now keeps conversation context instead of answering like a one-shot prompt.
+                </p>
+              </div>
             </div>
           </div>
         ) : (
-          <div className="space-y-4">
-            {chatMessages.map((msg) => (
-              <div key={msg.id} className="space-y-2">
-                <div className="flex items-center gap-2 text-xs">
-                  <span className={`font-semibold ${msg.isAI ? "text-primary" : "text-foreground"}`}>{msg.user}</span>
-                  <span className="text-muted-foreground">{msg.timestamp}</span>
-                </div>
+          <div className="space-y-2.5 px-3 py-3 pr-4">
+            {chatMessages.map((msg) => {
+              const isUser = !msg.isAI && msg.user !== "System";
+              const isSystem = msg.user === "System";
+
+              return (
                 <div
-                  className={`rounded-[1.35rem] border p-4 text-sm leading-7 ${
-                    msg.isAI
-                      ? "border-primary/15 bg-primary/10 text-foreground"
-                      : "border-white/8 bg-white/[0.03] text-foreground/92"
-                  }`}
+                  key={msg.id}
+                  className={cn("flex w-full", isUser ? "justify-end" : "justify-start")}
                 >
-                  {msg.message.split(/(```[\s\S]*?```)/g).map((part, index) => {
-                    if (part.startsWith("```") && part.endsWith("```")) {
-                      const lines = part.slice(3, -3).split("\n");
-                      const language = lines[0].trim();
-                      const code = lines.slice(1).join("\n").trim() || lines[0];
+                  <div
+                    className={cn(
+                      "flex max-w-[88%] min-w-0 flex-col space-y-1.5",
+                      isUser ? "items-end" : "items-start",
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        "flex items-center gap-2 text-[10px]",
+                        isUser ? "justify-end text-muted-foreground" : "justify-start text-muted-foreground",
+                      )}
+                    >
+                      <span className={cn("font-semibold", msg.isAI ? "text-primary" : "text-foreground")}>{msg.user}</span>
+                      <span>{msg.timestamp}</span>
+                    </div>
 
-                      return (
-                        <div key={index} className="my-3 overflow-hidden rounded-2xl border border-white/8 bg-editor">
-                          <div className="flex items-center justify-between border-b border-white/8 px-3 py-2">
-                            <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                              {language || "CODE"}
-                            </span>
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              className="h-7 rounded-full px-3 text-[11px]"
-                              onClick={() => {
-                                if (doc && currentFile) {
-                                  doc.transact(() => {
-                                    const text = doc.getText(`file:${currentFile}`);
-                                    text.delete(0, text.length);
-                                    text.insert(0, code);
-                                  });
-                                }
-                              }}
-                            >
-                              Apply to file
-                            </Button>
-                          </div>
-                          <pre className="overflow-x-auto p-3 text-xs text-foreground">{code}</pre>
-                        </div>
-                      );
-                    }
+                    <div
+                      className={cn(
+                        "w-full overflow-hidden rounded-[1.05rem] border p-3 text-[13px] leading-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]",
+                        isUser && "border-primary/18 bg-primary text-primary-foreground",
+                        msg.isAI && !isSystem && "border-white/10 bg-[#111827] text-slate-100",
+                        isSystem && "border-white/12 bg-white/[0.05] text-foreground",
+                      )}
+                    >
+                      {msg.message.split(/(```[\s\S]*?```)/g).map((part, index) => {
+                        if (part.startsWith("```") && part.endsWith("```")) {
+                          const lines = part.slice(3, -3).split("\n");
+                          const language = lines[0].trim();
+                          const code = lines.slice(1).join("\n").trim() || lines[0];
 
-                    return (
-                      <span key={index} className="block whitespace-pre-wrap">
-                        {part}
-                      </span>
-                    );
-                  })}
+                          return (
+                            <div key={index} className="my-2 overflow-hidden rounded-xl border border-white/8 bg-[#0B1220]">
+                              <div className="flex items-center justify-between border-b border-white/8 px-3 py-2">
+                                <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                                  {language || "CODE"}
+                                </span>
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  disabled={!doc || !currentFile}
+                                  className="h-7 rounded-full px-3 text-[10px]"
+                                  onClick={() => {
+                                    if (doc && currentFile) {
+                                      doc.transact(() => {
+                                        const text = doc.getText(`file:${currentFile}`);
+                                        text.delete(0, text.length);
+                                        text.insert(0, code);
+                                      });
+                                    }
+                                  }}
+                                >
+                                  Apply to file
+                                </Button>
+                              </div>
+                              <pre className="overflow-x-auto p-3 text-[12px] leading-5 text-slate-100">{code}</pre>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <span key={index} className="block whitespace-pre-wrap">
+                            {part}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
 
             {isTyping ? (
-              <div className="flex items-center gap-3 rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3 text-sm text-muted-foreground">
-                <Sparkles className="h-4 w-4 animate-pulse text-primary" />
-                AI is thinking...
+              <div className="flex justify-start">
+                <div className="rounded-[1.05rem] border border-white/8 bg-[#111827] px-3 py-2 text-[12px] text-slate-300">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-3.5 w-3.5 animate-pulse text-primary" />
+                    AI is thinking...
+                  </div>
+                </div>
               </div>
             ) : null}
           </div>
         )}
       </ScrollArea>
 
-      <div className="border-t border-white/8 p-4">
-        <div className="flex gap-2">
-          <Input
+      <div className="border-t border-white/8 px-3 py-2">
+        <div className="rounded-[0.95rem] border border-white/8 bg-white/[0.03] p-2">
+          <Textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSend()}
-            placeholder="Ask AI to explain, refactor, or debug the active file..."
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                void handleSend();
+              }
+            }}
+            placeholder="Ask AI to explain, debug, or rewrite the active file..."
+            className="min-h-[42px] resize-none border-0 bg-transparent px-0 py-0 text-[12px] leading-5 shadow-none focus-visible:ring-0"
           />
-          <Button onClick={handleSend} size="icon" className="accent-ring">
-            <Send className="h-4 w-4" />
-          </Button>
+
+          <div className="mt-2 flex items-center justify-between gap-3">
+            <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+              Enter to send. Shift+Enter for newline.
+            </p>
+            <Button onClick={() => void handleSend()} disabled={!message.trim() || isTyping} size="sm" className="h-8 rounded-full px-3 text-[11px]">
+              <Send className="h-3.5 w-3.5" />
+              Send
+            </Button>
+          </div>
         </div>
       </div>
     </div>

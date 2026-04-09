@@ -9,6 +9,11 @@ All colors MUST be HSL.
 */
 
 @layer base {
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 1.5rem;
+  }
+
   :root {
     --background: 0 0% 3%;
     --foreground: 0 0% 92%;
@@ -52,7 +57,7 @@ All colors MUST be HSL.
     --collaborator-3: 0 0% 68%;
     --collaborator-4: 0 0% 58%;
     
-    --success: 0 0% 76%;
+    --success: 142 72% 48%;
     
     --shadow-glow: 0 18px 48px hsl(0 0% 100% / 0.06);
     --shadow-card: 0 18px 56px hsl(0 0% 0% / 0.7);
@@ -74,6 +79,12 @@ All colors MUST be HSL.
       linear-gradient(180deg, hsl(var(--background)), hsl(0 0% 1%));
     background-attachment: fixed;
     font-feature-settings: "ss01" 1, "cv02" 1, "cv03" 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
   }
 
   ::selection {
