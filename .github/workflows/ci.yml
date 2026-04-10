@@ -17,14 +17,16 @@ jobs:
         node-version: 18.x
         cache: 'npm'
     
+    # Install all dependencies (root includes server deps)
+    - name: Install dependencies
+      run: npm install
+
     # Backend Tests
-    - name: Install backend dependencies
+    - name: Install backend-only dependencies
       run: cd server && npm install
     - name: Run backend tests
       run: cd server && npm test
 
     # Frontend Build
-    - name: Install frontend dependencies
-      run: npm install
     - name: Build frontend
       run: npm run build
