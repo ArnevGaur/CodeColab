@@ -24,7 +24,7 @@ const morgan = require('morgan');
 const { MongodbPersistence } = require('y-mongodb-provider');
 const debounce = require('lodash/debounce');
 const Room = require('./models/Room');
-const { emitRoomLifecycleEntry, instrumentDoc } = require('./syncLog');
+const { emitRoomLifecycleEntry, instrumentDoc, getRoomState } = require('./syncLog');
 
 const app = express();
 const server = http.createServer(app);
