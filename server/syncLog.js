@@ -166,9 +166,18 @@ function emitLogEntry(io, roomId, roomState, payload) {
 function extractTextOperations(doc, transaction) {
   const operations = [];
   const beforeTextByKey = transaction.meta.get(SYNC_LOG_BEFORE_TEXTS) || new Map();
+  
+  const fs = require('fs');
+  fs.appendFileSync('/Users/arnevgaur/projects/CodeColab/sync_debug.log', 
+    `[${new Date().toISOString()}] extractTextOperations: ${transaction.changedParentTypes.size} parent types changed.\n`);
 
   for (const [type, events] of transaction.changedParentTypes.entries()) {
-    if (type.constructor.name !== 'YText') continue;
+    const typeName = type.constructor.name;
+    fs.appendFileSync('/Users/arnevgaur/projects/CodeColab/sync_debug.log', 
+      `[${new Date().toISOString()}] Checking type: ${typeName} | Proto: ${type.__proto__?.constructor?.name}\n`);
+    
+    // Robust check for YText regardless of constructor identity
+    if (typeName !== 'YText' && !typeName.includes('Text')) continue;
 
     const shareKey = getShareKeyForType(doc, type);
     if (!shareKey) continue;
@@ -306,9 +315,11 @@ function handleConflict(io, roomId, roomState, doc, currentOperation) {
 }
 
 function instrumentDoc(docName, doc, io) {
+  const fs = require('fs');
+  fs.appendFileSync('/Users/arnevgaur/projects/CodeColab/sync_debug.log', 
+    `[${new Date().toISOString()}] instrumentDoc called for ${docName}. Doc GUID: ${doc.guid}\n`);
+
   if (doc[DOC_INSTRUMENTED]) {
-    return;
-  }
 
   doc[DOC_INSTRUMENTED] = true;
 
@@ -326,30 +337,24 @@ function instrumentDoc(docName, doc, io) {
     transaction.meta.set(SYNC_LOG_BEFORE_TEXTS, beforeTextByKey);
   });
 
-  doc.on('update', (update, origin, ydoc, transaction) => {
+  doc.on('afterTransaction', (transaction, ydoc) => {
     const roomId = getRoomIdFromDocName(docName);
     const roomState = getRoomState(roomId);
-    const operations = transaction ? extractTextOperations(ydoc, transaction) : [];
+    const operations = extractTextOperations(ydoc, transaction);
 
     const fs = require('fs');
     fs.appendFileSync('/Users/arnevgaur/projects/CodeColab/sync_debug.log', 
-      `[${new Date().toISOString()}] Room: ${roomId} | Ops: ${operations.length} | Transaction: ${!!transaction}\n`);
-    
-    if (transaction) {
-       const keys = Array.from(transaction.changedParentTypes.keys()).map(t => t.constructor.name);
-       fs.appendFileSync('/Users/arnevgaur/projects/CodeColab/sync_debug.log', 
-         `[${new Date().toISOString()}] Changed types: ${keys.join(', ')}\n`);
-    }
+      `[${new Date().toISOString()}] afterTransaction in ${roomId}: ${operations.length} ops.\n`);
 
     if (operations.length === 0) {
       return;
     }
 
+    const origin = transaction.origin;
     const actor =
-      getUserFromOrigin(ydoc, origin) ||
-      getUserFromAwareness(ydoc, decodedUpdate.structClientId) || {
-        clientId: decodedUpdate.structClientId,
-        username: decodedUpdate.structClientId !== null ? `User ${decodedUpdate.structClientId}` : 'Unknown user',
+      getUserFromOrigin(ydoc, origin) || {
+        clientId: transaction.doc.clientID,
+        username: `User ${transaction.doc.clientID}`,
         userColor: '#d4d4d8',
       };
     const actorKey =
