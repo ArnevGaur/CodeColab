@@ -80,7 +80,12 @@ router.post('/', authMiddleware, async (req, res) => {
     }
 
     // 5. Execute with 10s timeout and Stdin
-    const child = exec(fullCommand, { timeout: 10000 }, (error, stdout, stderr) => {
+    const env = { 
+      ...process.env, 
+      PATH: `/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:${process.env.PATH || ''}` 
+    };
+    
+    const child = exec(fullCommand, { timeout: 10000, env }, (error, stdout, stderr) => {
       // 6. Cleanup
       try {
         if (fs.existsSync(filePath)) fs.unlinkSync(filePath);

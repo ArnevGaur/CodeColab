@@ -168,7 +168,7 @@ function extractTextOperations(doc, transaction) {
   const beforeTextByKey = transaction.meta.get(SYNC_LOG_BEFORE_TEXTS) || new Map();
 
   for (const [type, events] of transaction.changedParentTypes.entries()) {
-    if (!(type instanceof Y.Text)) continue;
+    if (type.constructor.name !== 'YText') continue;
 
     const shareKey = getShareKeyForType(doc, type);
     if (!shareKey) continue;
@@ -233,7 +233,7 @@ function rangesOverlap(a, b) {
 
 function getMergedResultSnippet(doc, shareKey, start, end) {
   const type = doc.share.get(shareKey);
-  if (!(type instanceof Y.Text)) {
+  if (type?.constructor.name !== 'YText') {
     return '';
   }
 
@@ -313,9 +313,13 @@ function instrumentDoc(docName, doc, io) {
   doc[DOC_INSTRUMENTED] = true;
 
   doc.on('beforeTransaction', (transaction, ydoc) => {
+    if (transaction.meta.has(SYNC_LOG_BEFORE_TEXTS)) return;
+    const fs = require('fs');
+    fs.appendFileSync('/Users/arnevgaur/projects/CodeColab/sync_debug.log', 
+      `[${new Date().toISOString()}] beforeTransaction in ${docName}. Keys: ${Array.from(ydoc.share.keys()).join(', ')}\n`);
     const beforeTextByKey = new Map();
     for (const [key, value] of ydoc.share.entries()) {
-      if (value instanceof Y.Text) {
+      if (value.constructor.name === 'YText') {
         beforeTextByKey.set(key, value.toString());
       }
     }
@@ -325,8 +329,17 @@ function instrumentDoc(docName, doc, io) {
   doc.on('update', (update, origin, ydoc, transaction) => {
     const roomId = getRoomIdFromDocName(docName);
     const roomState = getRoomState(roomId);
-    const decodedUpdate = decodeUpdateMetadata(update);
     const operations = transaction ? extractTextOperations(ydoc, transaction) : [];
+
+    const fs = require('fs');
+    fs.appendFileSync('/Users/arnevgaur/projects/CodeColab/sync_debug.log', 
+      `[${new Date().toISOString()}] Room: ${roomId} | Ops: ${operations.length} | Transaction: ${!!transaction}\n`);
+    
+    if (transaction) {
+       const keys = Array.from(transaction.changedParentTypes.keys()).map(t => t.constructor.name);
+       fs.appendFileSync('/Users/arnevgaur/projects/CodeColab/sync_debug.log', 
+         `[${new Date().toISOString()}] Changed types: ${keys.join(', ')}\n`);
+    }
 
     if (operations.length === 0) {
       return;

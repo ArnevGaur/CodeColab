@@ -153,12 +153,10 @@ server.on('upgrade', (request, socket, head) => {
   console.log(`[Diagnostic] UPGRADE: Received upgrade request for ${pathname}`);
 
   if (pathname.startsWith('/socket.io/')) {
-    // Let socket.io handle its own upgrades automatically
     return;
   }
 
   wss.handleUpgrade(request, socket, head, (ws) => {
-    console.log(`[Diagnostic] UPGRADE: Passing upgrade to Yjs handler for ${pathname}`);
     wss.emit('connection', ws, request);
   });
 });
