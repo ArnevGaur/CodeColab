@@ -21,7 +21,8 @@ CodeColab is a dark, real-time collaborative coding workspace built with a React
 - Shared room state over WebSocket
 - File explorer backed by a shared Yjs map
 - Inline AI chat using the Groq Chat Completions API
-- Integrated terminal for running the active file
+- Integrated resizable terminal for running the active file
+- Live Sync Log panel with real-time operation tracking (OPS SENT, OPS RECV, CONFLICTS, AVG RES)
 - Automatic, manual, and pre-execution checkpoints
 - Diff viewer for comparing a checkpoint to the live editor state
 - Checkpoint restore broadcast to everyone in the room
@@ -33,8 +34,9 @@ CodeColab is a dark, real-time collaborative coding workspace built with a React
 - JWT login with refresh-token flow
 - MongoDB persistence with Mongoose
 - Fallback to `mongodb-memory-server` when `MONGODB_URI` is empty
-- Socket.IO room events
+- Socket.IO room events with sync operation tracking
 - Yjs document persistence in MongoDB via `y-mongodb-provider`
+- Real-time sync log engine with conflict detection and resolution tracking
 - Plain-text room backup in `Room.lastContent`
 - Local code execution endpoint with stdin support
 - Checkpoint and snapshot APIs
@@ -85,16 +87,18 @@ CodeColab is a dark, real-time collaborative coding workspace built with a React
 .
 ├── src/
 │   ├── components/
-│   │   ├── editor/        # top bar, sidebars, AI chat, terminal, diff, share modal
+│   │   ├── editor/        # top bar, sidebars, AI chat, terminal, diff, share modal, sync log
 │   │   ├── layout/        # backdrop, brand, auth shell, page transition
 │   │   └── ui/            # shadcn-style UI primitives
 │   ├── lib/               # auth helpers, socket client, utilities
 │   ├── pages/             # home, auth, dashboard, editor, not found
-│   └── store/             # persisted editor state with Zustand
+│   └── store/             # persisted editor state with Zustand (incl. syncLogStore)
 ├── server/
 │   ├── models/            # User, Room, Checkpoint, Snapshot
 │   ├── routes/            # auth, rooms, execute, checkpoints, snapshots
+│   ├── syncLog.js         # sync log engine: operation extraction, conflict detection
 │   └── index.js           # Express app, Socket.IO, Yjs persistence bootstrap
+├── .github/workflows/     # CI pipeline
 ├── public/
 ├── vite.config.ts
 └── README.md
@@ -127,10 +131,11 @@ CodeColab is a dark, real-time collaborative coding workspace built with a React
 - Left sidebar with:
   - file explorer
   - checkpoint history
-  - placeholder tabs for chat, AI hints, and settings
+  - sync log with live stats and event feed
+  - placeholder tabs for chat and settings
 - Center editor with Yjs-backed Monaco model binding per file
 - Right sidebar with AI chat
-- Bottom terminal panel
+- Bottom resizable terminal panel
 
 ## Collaboration and Persistence
 
@@ -160,6 +165,17 @@ CodeColab is a dark, real-time collaborative coding workspace built with a React
   - the active file name
   - the current file contents
 - Chat history is shared through Yjs so collaborators see the same conversation.
+
+## Sync Log
+
+The Sync Log provides real-time visibility into the collaboration protocol:
+
+- **OPS SENT** — total edit operations sent by the local user
+- **OPS RECV** — total operations received by other collaborators
+- **CONFLICTS** — detected overlapping edits from multiple users
+- **AVG RES** — average conflict resolution time
+
+Edit operations are tracked on the frontend via `doc.on('update')` and emitted to the server through socket.io. The server maintains per-room stats and broadcasts `sync-log-entry` events to all connected clients. The event feed shows inserts, deletes, user joins/leaves, sync confirmations, and conflict resolutions in real time.
 
 ## Terminal and Execution
 
@@ -281,6 +297,8 @@ Execution notes:
 
 ### 1. Install dependencies
 
+All core dependencies (including server-side ones like `yjs`, `y-websocket`, `mongoose`, etc.) are consolidated in the root `package.json` to avoid duplicate singleton issues:
+
 ```bash
 npm install
 cd server && npm install
@@ -353,15 +371,25 @@ cd server
 npm test
 ```
 
+## CI
+
+The project uses GitHub Actions (`.github/workflows/ci.yml`) to run on every push and PR to `main`:
+
+1. Install root dependencies (includes all shared libs)
+2. Install server-specific dependencies
+3. Run backend tests (`cd server && npm test`)
+4. Build frontend (`npm run build`)
+
 ## Current Notes and Limitations
 
 - The dashboard project list is currently seeded in the frontend and is not yet loaded from the room API.
 - The role selector in the editor is a frontend control right now; full backend-backed permission enforcement is not wired through the full UI.
 - The share modal exposes link copy and permission selection UI, but invite and permission persistence are not fully implemented.
-- Sidebar tabs for team chat, AI hints, and settings currently use placeholder surfaces.
+- Sidebar tabs for team chat and settings currently use placeholder surfaces.
 - OAuth buttons on login and signup are demo placeholders.
 - The execution service runs code locally and should be treated as a development feature, not a hardened sandbox.
 - Production build succeeds, but Vite currently warns about large bundle chunks.
+- Sync log conflict detection requires multiple concurrent users editing overlapping regions.
 
 ## Why This Project Exists
 

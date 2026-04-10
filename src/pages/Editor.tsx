@@ -214,10 +214,6 @@ const EditorPage = () => {
 
     provider.on('status', (event: any) => console.log('[Editor] Yjs Connection Status:', event.status));
     
-    // DIAGNOSTIC: Log WebSocket provider state
-    provider.on('sync', (synced: boolean) => {
-      console.log(`[SYNC-DEBUG] Provider synced: ${synced} | wsconnected: ${provider.wsconnected}`);
-    });
     
     // 3. Fallback Seeding Logic
     provider.on('sync', async (isSynced: boolean) => {

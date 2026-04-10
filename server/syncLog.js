@@ -326,10 +326,6 @@ function handleConflict(io, roomId, roomState, doc, currentOperation) {
 }
 
 function instrumentDoc(docName, doc, io) {
-  const fs = require('fs');
-  fs.appendFileSync('/Users/arnevgaur/projects/CodeColab/sync_debug.log', 
-    `[${new Date().toISOString()}] instrumentDoc called for ${docName}. Doc GUID: ${doc.guid}\n`);
-
   if (doc[DOC_INSTRUMENTED]) {
     return;
   }
@@ -338,9 +334,6 @@ function instrumentDoc(docName, doc, io) {
 
   doc.on('beforeTransaction', (transaction, ydoc) => {
     if (transaction.meta.has(SYNC_LOG_BEFORE_TEXTS)) return;
-    const fs = require('fs');
-    fs.appendFileSync('/Users/arnevgaur/projects/CodeColab/sync_debug.log', 
-      `[${new Date().toISOString()}] beforeTransaction in ${docName}. Keys: ${Array.from(ydoc.share.keys()).join(', ')}\n`);
     const beforeTextByKey = new Map();
     for (const [key, value] of ydoc.share.entries()) {
       if (value.constructor.name === 'YText') {
@@ -354,10 +347,6 @@ function instrumentDoc(docName, doc, io) {
     const roomId = getRoomIdFromDocName(docName);
     const roomState = getRoomState(roomId);
     const operations = extractTextOperations(ydoc, transaction);
-
-    const fs = require('fs');
-    fs.appendFileSync('/Users/arnevgaur/projects/CodeColab/sync_debug.log', 
-      `[${new Date().toISOString()}] afterTransaction in ${roomId}: ${operations.length} ops.\n`);
 
     if (operations.length === 0) {
       return;

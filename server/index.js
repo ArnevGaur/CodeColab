@@ -157,38 +157,15 @@ let persistence = null;
 
 wss.on('connection', (ws, req) => {
   const docName = req.url.slice(1).split('?')[0];
-  console.log(`[Diagnostic] Yjs: Connection requested for: ${docName}`);
   
   const doc = getYDoc(docName);
   
   if (!activeDocs.has(docName)) {
-    console.log(`[Diagnostic] Creating new shared Y.Doc instance for: ${docName}`);
     activeDocs.set(docName, doc);
-
-    // Add a direct update listener to verify edits reach the server
-    doc.on('update', (update, origin) => {
-      const fs = require('fs');
-      fs.appendFileSync('/Users/arnevgaur/projects/CodeColab/sync_debug.log', 
-        `[${new Date().toISOString()}] DOC.UPDATE: ${docName} | update size: ${update.length} | origin: ${typeof origin}\n`);
-    });
   }
 
   instrumentDoc(docName, doc, io);
-
-  // Count raw WebSocket messages and decode their type
-  let msgCount = 0;
-  ws.on('message', (data) => {
-    msgCount++;
-    const buf = new Uint8Array(data);
-    const msgType = buf.length > 0 ? buf[0] : -1;
-    const typeLabel = msgType === 0 ? 'SYNC' : msgType === 1 ? 'AWARENESS' : `TYPE_${msgType}`;
-    const fs = require('fs');
-    fs.appendFileSync('/Users/arnevgaur/projects/CodeColab/sync_debug.log', 
-      `[${new Date().toISOString()}] RAW WS MSG #${msgCount}: ${docName} | ${typeLabel} | size: ${buf.length} bytes\n`);
-  });
-  
   setupWSConnection(ws, req);
-  console.log(`[Diagnostic] Yjs: Connection established for ${docName}. Active clients in room: ${doc.awareness.getStates().size}`);
 });
 
 server.on('upgrade', (request, socket, head) => {
