@@ -180,6 +180,22 @@ const EditorPage = () => {
     const doc = new Y.Doc();
     docRef.current = doc;
 
+    // Track local edits and emit sync log events via socket.io
+    let localEditCount = 0;
+    doc.on('update', (update: Uint8Array, origin: any) => {
+      const originName = origin?.constructor?.name || typeof origin;
+      // Only track local edits (from MonacoBinding), not remote syncs
+      if (originName === 'MonacoBinding') {
+        localEditCount++;
+        socket.emit('sync-operation', {
+          roomId: projectId,
+          type: 'insert',
+          size: update.length,
+          editNumber: localEditCount,
+        });
+      }
+    });
+
     const roomName = `codecolab-room-${projectId}`;
     
     // 1. IndexedDB (Local cache)
@@ -197,6 +213,11 @@ const EditorPage = () => {
     providerRef.current = provider;
 
     provider.on('status', (event: any) => console.log('[Editor] Yjs Connection Status:', event.status));
+    
+    // DIAGNOSTIC: Log WebSocket provider state
+    provider.on('sync', (synced: boolean) => {
+      console.log(`[SYNC-DEBUG] Provider synced: ${synced} | wsconnected: ${provider.wsconnected}`);
+    });
     
     // 3. Fallback Seeding Logic
     provider.on('sync', async (isSynced: boolean) => {

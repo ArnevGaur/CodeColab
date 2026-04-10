@@ -110,6 +110,30 @@ io.on('connection', (socket) => {
     });
   });
 
+  socket.on('sync-operation', (payload) => {
+    const roomId = payload?.roomId || socket.data.currentRoomId;
+    if (!roomId) return;
+
+    const username = socket.data.username || 'Unknown user';
+    const userColor = socket.data.userColor || '#d4d4d8';
+
+    const roomState = getRoomState(roomId);
+    roomState.stats.totalOperationsSent += 1;
+
+    // Count other clients in the room as recipients
+    const roomSockets = io.sockets.adapter.rooms.get(roomId);
+    const recipientCount = roomSockets ? Math.max(roomSockets.size - 1, 0) : 0;
+    roomState.stats.totalOperationsReceived += recipientCount;
+
+    emitRoomLifecycleEntry(io, roomId, {
+      type: payload?.type === 'delete' ? 'delete' : 'insert',
+      username,
+      userColor,
+      detail: `${username} edited code (op #${payload?.editNumber || '?'})`,
+      positionHint: null,
+    });
+  });
+
   socket.on('disconnecting', () => {
     const roomId = socket.data.currentRoomId;
     if (!roomId) return;
@@ -135,14 +159,33 @@ wss.on('connection', (ws, req) => {
   const docName = req.url.slice(1).split('?')[0];
   console.log(`[Diagnostic] Yjs: Connection requested for: ${docName}`);
   
-  // Ensure we reuse the same Y.Doc for the same room
+  const doc = getYDoc(docName);
+  
   if (!activeDocs.has(docName)) {
     console.log(`[Diagnostic] Creating new shared Y.Doc instance for: ${docName}`);
-    activeDocs.set(docName, getYDoc(docName));
+    activeDocs.set(docName, doc);
+
+    // Add a direct update listener to verify edits reach the server
+    doc.on('update', (update, origin) => {
+      const fs = require('fs');
+      fs.appendFileSync('/Users/arnevgaur/projects/CodeColab/sync_debug.log', 
+        `[${new Date().toISOString()}] DOC.UPDATE: ${docName} | update size: ${update.length} | origin: ${typeof origin}\n`);
+    });
   }
 
-  const doc = activeDocs.get(docName);
   instrumentDoc(docName, doc, io);
+
+  // Count raw WebSocket messages and decode their type
+  let msgCount = 0;
+  ws.on('message', (data) => {
+    msgCount++;
+    const buf = new Uint8Array(data);
+    const msgType = buf.length > 0 ? buf[0] : -1;
+    const typeLabel = msgType === 0 ? 'SYNC' : msgType === 1 ? 'AWARENESS' : `TYPE_${msgType}`;
+    const fs = require('fs');
+    fs.appendFileSync('/Users/arnevgaur/projects/CodeColab/sync_debug.log', 
+      `[${new Date().toISOString()}] RAW WS MSG #${msgCount}: ${docName} | ${typeLabel} | size: ${buf.length} bytes\n`);
+  });
   
   setupWSConnection(ws, req);
   console.log(`[Diagnostic] Yjs: Connection established for ${docName}. Active clients in room: ${doc.awareness.getStates().size}`);

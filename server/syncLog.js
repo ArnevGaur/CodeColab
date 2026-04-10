@@ -166,69 +166,80 @@ function emitLogEntry(io, roomId, roomState, payload) {
 function extractTextOperations(doc, transaction) {
   const operations = [];
   const beforeTextByKey = transaction.meta.get(SYNC_LOG_BEFORE_TEXTS) || new Map();
-  
-  const fs = require('fs');
-  fs.appendFileSync('/Users/arnevgaur/projects/CodeColab/sync_debug.log', 
-    `[${new Date().toISOString()}] extractTextOperations: ${transaction.changedParentTypes.size} parent types changed.\n`);
 
-  for (const [type, events] of transaction.changedParentTypes.entries()) {
-    const typeName = type.constructor.name;
-    fs.appendFileSync('/Users/arnevgaur/projects/CodeColab/sync_debug.log', 
-      `[${new Date().toISOString()}] Checking type: ${typeName} | Proto: ${type.__proto__?.constructor?.name}\n`);
-    
-    // Robust check for YText regardless of constructor identity
-    if (typeName !== 'YText' && !typeName.includes('Text')) continue;
+  // Instead of relying on changedParentTypes (which is empty for remote updates),
+  // compare before/after text for every tracked shared text type.
+  for (const [shareKey, beforeText] of beforeTextByKey.entries()) {
+    const type = doc.share.get(shareKey);
+    if (!type || type.constructor.name !== 'YText') continue;
 
-    const shareKey = getShareKeyForType(doc, type);
-    if (!shareKey) continue;
-
-    const beforeText = beforeTextByKey.get(shareKey) || '';
     const afterText = type.toString();
+    if (beforeText === afterText) continue;
 
-    for (const event of events) {
-      const delta = event.delta || [];
-      let cursor = 0;
+    // Determine if this was an insert or delete (or both) by comparing lengths
+    const lenDiff = afterText.length - beforeText.length;
 
-      for (const segment of delta) {
-        if (segment.retain) {
-          cursor += segment.retain;
-          continue;
-        }
-
-        if (segment.insert) {
-          const insertedText = typeof segment.insert === 'string'
-            ? segment.insert
-            : JSON.stringify(segment.insert);
-
-          operations.push({
-            type: 'insert',
-            shareKey,
-            position: cursor,
-            length: insertedText.length || 1,
-            snippet: truncateSnippet(insertedText),
-            positionHint: computeLineNumber(afterText, cursor),
-          });
-
-          cursor += insertedText.length;
-          continue;
-        }
-
-        if (segment.delete) {
-          const deletedText = beforeText.slice(cursor, cursor + segment.delete);
-          operations.push({
-            type: 'delete',
-            shareKey,
-            position: cursor,
-            length: segment.delete,
-            snippet: truncateSnippet(deletedText || `${segment.delete} chars`),
-            positionHint: computeLineNumber(beforeText, cursor),
-          });
-        }
-      }
+    if (lenDiff > 0) {
+      // Net insert
+      const insertedText = findInsertedText(beforeText, afterText);
+      const position = findChangePosition(beforeText, afterText);
+      operations.push({
+        type: 'insert',
+        shareKey,
+        position,
+        length: insertedText.length,
+        snippet: truncateSnippet(insertedText),
+        positionHint: computeLineNumber(afterText, position),
+      });
+    } else if (lenDiff < 0) {
+      // Net delete
+      const deletedText = findInsertedText(afterText, beforeText); // reverse diff
+      const position = findChangePosition(beforeText, afterText);
+      operations.push({
+        type: 'delete',
+        shareKey,
+        position,
+        length: deletedText.length,
+        snippet: truncateSnippet(deletedText),
+        positionHint: computeLineNumber(beforeText, position),
+      });
+    } else {
+      // Same length but different content — treat as a replace (insert)
+      const position = findChangePosition(beforeText, afterText);
+      const changedText = afterText.slice(position, position + 1);
+      operations.push({
+        type: 'insert',
+        shareKey,
+        position,
+        length: 1,
+        snippet: truncateSnippet(changedText || 'replaced'),
+        positionHint: computeLineNumber(afterText, position),
+      });
     }
   }
 
   return operations;
+}
+
+/**
+ * Find the position where two strings first differ.
+ */
+function findChangePosition(before, after) {
+  const minLen = Math.min(before.length, after.length);
+  for (let i = 0; i < minLen; i++) {
+    if (before[i] !== after[i]) return i;
+  }
+  return minLen;
+}
+
+/**
+ * Find the inserted text by comparing before and after strings.
+ * Assumes `after` is longer than `before`.
+ */
+function findInsertedText(shorter, longer) {
+  const pos = findChangePosition(shorter, longer);
+  const lenDiff = longer.length - shorter.length;
+  return longer.slice(pos, pos + lenDiff);
 }
 
 function rangesOverlap(a, b) {
@@ -320,6 +331,8 @@ function instrumentDoc(docName, doc, io) {
     `[${new Date().toISOString()}] instrumentDoc called for ${docName}. Doc GUID: ${doc.guid}\n`);
 
   if (doc[DOC_INSTRUMENTED]) {
+    return;
+  }
 
   doc[DOC_INSTRUMENTED] = true;
 
@@ -371,10 +384,6 @@ function instrumentDoc(docName, doc, io) {
       const detail = operation.type === 'insert'
         ? `${actor.username} inserted "${operation.snippet || 'text'}" in ${operation.shareKey}`
         : `${actor.username} deleted "${operation.snippet || 'text'}" in ${operation.shareKey}`;
-      const decodedKindsSuffix = decodedUpdate.structKinds.length > 0
-        ? ` [${decodedUpdate.structKinds.join(', ')}]`
-        : '';
-
       const trackedOperation = {
         ...operation,
         clientId: actor.clientId,
@@ -382,14 +391,14 @@ function instrumentDoc(docName, doc, io) {
         username: actor.username,
         userColor: actor.userColor,
         timestampMs: Date.now(),
-        rawUpdateLength: update.length,
+        rawUpdateLength: 0,
       };
 
       emitLogEntry(io, roomId, roomState, {
         type: operation.type,
         username: actor.username,
         userColor: actor.userColor,
-        detail: `${detail}${decodedKindsSuffix}`,
+        detail: detail,
         positionHint: operation.positionHint,
       });
 
