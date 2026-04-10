@@ -33,7 +33,7 @@ interface EditorState {
   terminalOpen: boolean;
   leftSidebarOpen: boolean;
   rightSidebarOpen: boolean;
-  leftSidebarTab: 'files' | 'chat' | 'ai' | 'settings' | 'history';
+  leftSidebarTab: 'files' | 'chat' | 'ai' | 'settings' | 'history' | 'sync';
   role: 'owner' | 'editor' | 'viewer';
   
   setCurrentFile: (fileId: string) => void;
@@ -43,10 +43,12 @@ interface EditorState {
   toggleTerminal: () => void;
   toggleLeftSidebar: () => void;
   toggleRightSidebar: () => void;
-  setLeftSidebarTab: (tab: 'files' | 'chat' | 'ai' | 'settings' | 'history') => void;
+  setLeftSidebarTab: (tab: 'files' | 'chat' | 'ai' | 'settings' | 'history' | 'sync') => void;
   setChatMessages: (messages: ChatMessage[]) => void;
   setOnlineUsers: (users: { name: string; color: string; clientId: number; currentFile?: string }[]) => void;
   setRole: (role: 'owner' | 'editor' | 'viewer') => void;
+  terminalHeight: number;
+  setTerminalHeight: (height: number) => void;
 }
 
 export const useEditorStore = create<EditorState>()(
@@ -88,6 +90,7 @@ Happy coding! 💻
   rightSidebarOpen: true,
   leftSidebarTab: 'files',
   role: 'owner',
+  terminalHeight: 220,
 
   setCurrentFile: (fileId) => set({ currentFile: fileId }),
   addFile: (file) => set((state) => ({ files: [...state.files, file] })),
@@ -106,6 +109,7 @@ Happy coding! 💻
   toggleRightSidebar: () => set((state) => ({ rightSidebarOpen: !state.rightSidebarOpen })),
   setLeftSidebarTab: (tab) => set({ leftSidebarTab: tab }),
   setRole: (role) => set({ role }),
+  setTerminalHeight: (height) => set({ terminalHeight: height }),
     }),
     {
       name: 'editor-storage',

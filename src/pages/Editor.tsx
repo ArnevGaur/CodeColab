@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import TopBar from '@/components/editor/TopBar';
 import Sidebar from '@/components/editor/Sidebar';
 import AIChat from '@/components/editor/AIChat';
+import SyncStatusWidget from '@/components/editor/SyncStatusWidget';
 import Terminal from '@/components/editor/Terminal';
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
@@ -29,7 +30,41 @@ const EditorPage = () => {
     toggleLeftSidebar,
     toggleRightSidebar,
     role,
+    terminalHeight,
+    setTerminalHeight,
   } = useEditorStore();
+
+  const [isResizing, setIsResizing] = useState(false);
+
+  const stopResizing = useCallback(() => {
+    setIsResizing(false);
+  }, []);
+
+  const resize = useCallback(
+    (e: MouseEvent) => {
+      if (isResizing) {
+        const newHeight = window.innerHeight - e.clientY;
+        if (newHeight > 64 && newHeight < window.innerHeight * 0.7) {
+          setTerminalHeight(newHeight);
+        }
+      }
+    },
+    [isResizing, setTerminalHeight]
+  );
+
+  useEffect(() => {
+    if (isResizing) {
+      window.addEventListener('mousemove', resize);
+      window.addEventListener('mouseup', stopResizing);
+    } else {
+      window.removeEventListener('mousemove', resize);
+      window.removeEventListener('mouseup', stopResizing);
+    }
+    return () => {
+      window.removeEventListener('mousemove', resize);
+      window.removeEventListener('mouseup', stopResizing);
+    };
+  }, [isResizing, resize, stopResizing]);
 
   const [onlineUsers, setOnlineUsers] = useState(1);
   const [isDocReady, setIsDocReady] = useState(false);
@@ -51,6 +86,12 @@ const EditorPage = () => {
 
   // Track which file is currently bound so we don't re-bind unnecessarily
   const boundFileRef = useRef<string | null>(null);
+  const sessionIdentityRef = useRef<{
+    username: string;
+    userColor: string;
+    yClientId: number | null;
+  } | null>(null);
+  const hasReportedSyncRef = useRef(false);
 
   // ─── Bind editor to the Y.Text for a specific file ─────────────────────
   const bindToFile = useCallback((fileId: string) => {
@@ -135,6 +176,7 @@ const EditorPage = () => {
     if (!projectId) return;
 
     console.log('[Editor] Initializing Yjs for projectId:', projectId);
+    hasReportedSyncRef.current = false;
     const doc = new Y.Doc();
     docRef.current = doc;
 
@@ -160,6 +202,16 @@ const EditorPage = () => {
     provider.on('sync', async (isSynced: boolean) => {
       if (!isSynced || !projectId) return;
       console.log('[Editor] Yjs Network Synced');
+
+      if (!hasReportedSyncRef.current && sessionIdentityRef.current) {
+        socket.emit('room-synced', {
+          roomId: projectId,
+          username: sessionIdentityRef.current.username,
+          userColor: sessionIdentityRef.current.userColor,
+          yClientId: sessionIdentityRef.current.yClientId,
+        });
+        hasReportedSyncRef.current = true;
+      }
       
       // Check if doc is genuinely empty
       let hasContent = false;
@@ -221,9 +273,19 @@ const EditorPage = () => {
     const colors = ['#e8e8e8', '#d6d6d6', '#c4c4c4', '#b3b3b3', '#a1a1a1', '#8f8f8f', '#7d7d7d', '#dcdcdc', '#cacaca', '#aaaaaa', '#8a8a8a'];
     const myColor = colors[Math.abs(myId.split('').reduce((a, c) => a + c.charCodeAt(0), 0)) % colors.length];
     provider.awareness.setLocalStateField('user', { name: myName, color: myColor });
+    sessionIdentityRef.current = {
+      username: myName,
+      userColor: myColor,
+      yClientId: provider.awareness.clientID,
+    };
 
     // Join Socket.io for other features
-    socket.emit('join-room', projectId);
+    socket.emit('join-room', {
+      roomId: projectId,
+      username: myName,
+      userColor: myColor,
+      yClientId: provider.awareness.clientID,
+    });
     
     const handleRestore = (data: any) => {
       if (!docRef.current || !currentFile) return;
@@ -240,6 +302,16 @@ const EditorPage = () => {
 
     return () => {
       console.log('[Editor] Destroying Yjs session');
+      if (projectId && sessionIdentityRef.current) {
+        socket.emit('leave-room', {
+          roomId: projectId,
+          username: sessionIdentityRef.current.username,
+          userColor: sessionIdentityRef.current.userColor,
+          yClientId: sessionIdentityRef.current.yClientId,
+        });
+      }
+      sessionIdentityRef.current = null;
+      hasReportedSyncRef.current = false;
       provider.disconnect();
       indexeddbProvider.destroy();
       doc.destroy();
@@ -426,25 +498,25 @@ const EditorPage = () => {
                   {terminalOpen ? (
                     <motion.div
                       initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 160, opacity: 1 }}
+                      animate={{ height: terminalHeight || 220, opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
                       transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-                      className="relative overflow-hidden border-t border-white/8 bg-editor"
+                      className="relative overflow-hidden border-t border-white/8 bg-[#0B1220]"
                     >
-                      <div className="relative h-40">
+                      <div
+                        className="absolute left-0 right-0 top-0 z-50 h-1 cursor-ns-resize bg-transparent hover:bg-primary/40 transition-colors"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          setIsResizing(true);
+                        }}
+                      />
+                      <div className="h-full w-full">
                         <Terminal doc={docRef.current} />
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={toggleTerminal}
-                          className="absolute right-3 top-3 z-10 rounded-full bg-card/70"
-                        >
-                          <ChevronUp className="h-4 w-4" />
-                        </Button>
                       </div>
                     </motion.div>
                   ) : null}
                 </AnimatePresence>
+                <SyncStatusWidget isSynced={isDocReady} />
             </div>
 
             <motion.aside

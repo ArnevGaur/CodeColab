@@ -1,11 +1,13 @@
-import { FileText, History, MessageSquare, Settings, Sparkles } from "lucide-react";
+import { Activity, FileText, History, MessageSquare, Settings, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 import * as Y from "yjs";
 
 import { useEditorStore } from "@/store/editorStore";
 import { Button } from "@/components/ui/button";
+import { useSyncLogStore } from "@/store/syncLogStore";
 import FileExplorer from "./FileExplorer";
 import HistoryPanel from "./HistoryPanel";
+import SyncLog from "./SyncLog";
 
 interface SidebarProps {
   doc: Y.Doc | null;
@@ -16,11 +18,13 @@ const tabs = [
   { id: "history" as const, icon: History, label: "History", description: "Compare checkpoints and restore previous states." },
   { id: "chat" as const, icon: MessageSquare, label: "Chat", description: "Team chat surface reserved for a later pass." },
   { id: "ai" as const, icon: Sparkles, label: "Hints", description: "Quick AI affordances belong here when expanded." },
+  { id: "sync" as const, icon: Activity, label: "Sync", description: "Visible operation flow, conflict detection, and merge resolution." },
   { id: "settings" as const, icon: Settings, label: "Settings", description: "Workspace-level preferences and access controls." },
 ];
 
 const Sidebar = ({ doc }: SidebarProps) => {
   const { leftSidebarTab, setLeftSidebarTab } = useEditorStore();
+  const unreadCount = useSyncLogStore((state) => state.unreadCount);
   const activeTab = tabs.find((tab) => tab.id === leftSidebarTab) || tabs[0];
 
   const renderPlaceholder = (title: string, description: string) => (
@@ -58,13 +62,23 @@ const Sidebar = ({ doc }: SidebarProps) => {
               <Button
                 variant={leftSidebarTab === tab.id ? "secondary" : "ghost"}
                 size="icon"
-                onClick={() => setLeftSidebarTab(tab.id)}
-                className={`h-10 w-10 rounded-full ${
+                onClick={() => {
+                  setLeftSidebarTab(tab.id);
+                  if (tab.id === 'sync') {
+                    useSyncLogStore.getState().resetUnread();
+                  }
+                }}
+                className={`relative h-10 w-10 rounded-full ${
                   leftSidebarTab === tab.id ? "bg-white/[0.07] text-foreground" : "text-muted-foreground"
                 }`}
                 title={tab.label}
               >
                 <Icon className="h-4 w-4" />
+                {tab.id === 'sync' && unreadCount > 0 && leftSidebarTab !== 'sync' ? (
+                  <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold text-white">
+                    {Math.min(unreadCount, 99)}
+                  </span>
+                ) : null}
               </Button>
             </motion.div>
           );
@@ -80,6 +94,9 @@ const Sidebar = ({ doc }: SidebarProps) => {
         <div className="min-h-0 flex-1">
           {leftSidebarTab === "files" && <FileExplorer doc={doc} />}
           {leftSidebarTab === "history" && <HistoryPanel doc={doc} />}
+          {leftSidebarTab === "sync" && (
+            <SyncLog className="flex-1" />
+          )}
           {leftSidebarTab === "chat" && renderPlaceholder("Team chat", "Keep room conversation anchored next to the files it refers to.")}
           {leftSidebarTab === "ai" && renderPlaceholder("AI workspace", "Secondary actions and canned prompts can live here without crowding the editor pane.")}
           {leftSidebarTab === "settings" && renderPlaceholder("Workspace settings", "Permissions, room metadata, and editor preferences belong in this lane.")}

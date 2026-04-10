@@ -24,6 +24,7 @@ const morgan = require('morgan');
 const { MongodbPersistence } = require('y-mongodb-provider');
 const debounce = require('lodash/debounce');
 const Room = require('./models/Room');
+const { emitRoomLifecycleEntry, instrumentDoc } = require('./syncLog');
 
 const app = express();
 const server = http.createServer(app);
@@ -40,9 +41,85 @@ const io = new Server(server, {
 const activeDocs = new Map();
 
 io.on('connection', (socket) => {
-  socket.on('join-room', (roomId) => {
+  socket.on('join-room', (payload) => {
+    const roomData = typeof payload === 'string' ? { roomId: payload } : payload || {};
+    const roomId = roomData.roomId;
+    if (!roomId) return;
+
+    const previousRoomId = socket.data.currentRoomId;
+    if (previousRoomId && previousRoomId !== roomId) {
+      emitRoomLifecycleEntry(io, previousRoomId, {
+        type: 'user-left',
+        username: socket.data.username || 'Unknown user',
+        userColor: socket.data.userColor || '#9ca3af',
+        detail: `${socket.data.username || 'Unknown user'} left the session`,
+      });
+      socket.leave(previousRoomId);
+    }
+
+    socket.data.currentRoomId = roomId;
+    socket.data.username = roomData.username || socket.data.username || 'Unknown user';
+    socket.data.userColor = roomData.userColor || socket.data.userColor || '#d4d4d8';
+    socket.data.yClientId = roomData.yClientId ?? socket.data.yClientId ?? null;
+
     socket.join(roomId);
     console.log(`Socket ${socket.id} joined room ${roomId}`);
+
+    if (previousRoomId !== roomId) {
+      emitRoomLifecycleEntry(io, roomId, {
+        type: 'user-joined',
+        username: socket.data.username,
+        userColor: socket.data.userColor,
+        detail: `${socket.data.username} joined the session`,
+      });
+    }
+  });
+
+  socket.on('leave-room', (payload) => {
+    const roomData = typeof payload === 'string' ? { roomId: payload } : payload || {};
+    const roomId = roomData.roomId || socket.data.currentRoomId;
+    if (!roomId) return;
+
+    emitRoomLifecycleEntry(io, roomId, {
+      type: 'user-left',
+      username: socket.data.username || roomData.username || 'Unknown user',
+      userColor: socket.data.userColor || roomData.userColor || '#9ca3af',
+      detail: `${socket.data.username || roomData.username || 'Unknown user'} left the session`,
+    });
+
+    socket.leave(roomId);
+    if (socket.data.currentRoomId === roomId) {
+      socket.data.currentRoomId = null;
+    }
+  });
+
+  socket.on('room-synced', (payload) => {
+    const roomData = payload || {};
+    const roomId = roomData.roomId || socket.data.currentRoomId;
+    if (!roomId) return;
+
+    socket.data.username = roomData.username || socket.data.username || 'Unknown user';
+    socket.data.userColor = roomData.userColor || socket.data.userColor || '#d4d4d8';
+    socket.data.yClientId = roomData.yClientId ?? socket.data.yClientId ?? null;
+
+    emitRoomLifecycleEntry(io, roomId, {
+      type: 'synced',
+      username: socket.data.username,
+      userColor: socket.data.userColor,
+      detail: `${socket.data.username} is fully in sync`,
+    });
+  });
+
+  socket.on('disconnecting', () => {
+    const roomId = socket.data.currentRoomId;
+    if (!roomId) return;
+
+    emitRoomLifecycleEntry(io, roomId, {
+      type: 'user-left',
+      username: socket.data.username || 'Unknown user',
+      userColor: socket.data.userColor || '#9ca3af',
+      detail: `${socket.data.username || 'Unknown user'} left the session`,
+    });
   });
 });
 
@@ -63,10 +140,11 @@ wss.on('connection', (ws, req) => {
     console.log(`[Diagnostic] Creating new shared Y.Doc instance for: ${docName}`);
     activeDocs.set(docName, getYDoc(docName));
   }
+
+  const doc = activeDocs.get(docName);
+  instrumentDoc(docName, doc, io);
   
   setupWSConnection(ws, req);
-  
-  const doc = activeDocs.get(docName);
   console.log(`[Diagnostic] Yjs: Connection established for ${docName}. Active clients in room: ${doc.awareness.getStates().size}`);
 });
 

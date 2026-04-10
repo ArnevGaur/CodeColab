@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Terminal as TerminalIcon } from "lucide-react";
+import { Terminal as TerminalIcon, X } from "lucide-react";
 import { useParams } from "react-router-dom";
 import * as Y from "yjs";
 
@@ -8,6 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { authenticatedFetch, getAccessTokenPayload } from "@/lib/auth";
 import { useEditorStore } from "@/store/editorStore";
+import { cn } from "@/lib/utils";
 
 interface TerminalProps {
   doc?: Y.Doc | null;
@@ -52,7 +53,7 @@ const Terminal = ({ doc }: TerminalProps) => {
       return;
     }
 
-    const file = files.find((entry) => entry.name === fileName);
+    const file = files.find((entry) => entry.name === fileName) || currentFileData;
 
     if (command === "run" || command === "node" || command === "python" || command === "go" || command === "javac") {
       if (!file) {
@@ -64,9 +65,16 @@ const Terminal = ({ doc }: TerminalProps) => {
         setIsExecuting(true);
         setHistory((prev) => [...prev, `Executing ${fileName}...`]);
 
-        let codeToExecute = file.content;
-        if (file.id === currentFile && doc) {
-          codeToExecute = doc.getText(`file:${currentFile}`).toString();
+        let codeToExecute = file.content || "";
+        if (doc && file?.id) {
+          const liveText = doc.getText(`file:${file.id}`).toString();
+          if (liveText.length > 0 || file.id === currentFile) {
+            codeToExecute = liveText;
+          }
+        }
+
+        if (codeToExecute === undefined || codeToExecute === null) {
+          codeToExecute = "";
         }
 
         try {
@@ -110,21 +118,27 @@ const Terminal = ({ doc }: TerminalProps) => {
             }),
           });
 
-          const data = await res.json();
+          const data = await res.json().catch(() => null);
 
-          if (data.error) {
-            setHistory((prev) => [...prev, `Error (${data.error}): ${data.stderr ? data.stderr : ""}`]);
+          if (!res.ok) {
+            const errorMessage = data?.error || `Execution failed with status ${res.status}`;
+            const stderrMessage = data?.stderr ? ` ${data.stderr}` : "";
+            setHistory((prev) => [...prev, `Error: ${errorMessage}${stderrMessage}`]);
+          } else if (data?.error) {
+            setHistory((prev) => [...prev, `Error: ${data.error}${data.stderr ? ` ${data.stderr}` : ""}`]);
           } else {
-            const outLines = (data.stdout || "").split("\n").filter(Boolean);
-            const errLines = (data.stderr || "").split("\n").filter(Boolean);
-            const compLines = (data.compile_output || "").split("\n").filter(Boolean);
+            const outLines = (data?.stdout || "").split("\n").filter(Boolean);
+            const errLines = (data?.stderr || "").split("\n").filter(Boolean);
+            const compLines = (data?.compile_output || "").split("\n").filter(Boolean);
+            const hasVisibleOutput = outLines.length > 0 || errLines.length > 0 || compLines.length > 0;
 
             setHistory((prev) => [
               ...prev,
               ...compLines.map((line: string) => `Compiler: ${line}`),
+              ...(hasVisibleOutput ? [] : ["Execution completed with no output."]),
               ...outLines,
               ...errLines.map((line: string) => `Error: ${line}`),
-              `Process exited with code ${data.code !== undefined ? data.code : "unknown"}`,
+              `Process exited with code ${data?.code !== undefined ? data.code : "unknown"}`,
             ]);
           }
         } catch (err: any) {
@@ -142,72 +156,113 @@ const Terminal = ({ doc }: TerminalProps) => {
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-editor text-xs font-mono text-foreground">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/8 bg-surface/85 px-3 py-2">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-foreground">
-            <TerminalIcon className="h-4 w-4 text-muted-foreground" />
-            Terminal
+    <div className="flex h-full min-h-0 flex-col bg-[#0B1220] text-[13px] font-mono text-foreground/90 selection:bg-primary/20">
+      <div className="flex shrink-0 items-center justify-between border-b border-white/5 bg-white/[0.01] px-4 py-2">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-muted-foreground/80">
+            <TerminalIcon className="h-3.5 w-3.5" />
+            <span>Terminal</span>
           </div>
-          <p className="mt-1 text-[11px] text-muted-foreground">Run the active file or specify one directly.</p>
+          <div className="h-3 w-px bg-white/10" />
+          {isExecuting ? (
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75"></span>
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500"></span>
+              </span>
+              <span className="text-[10px] uppercase tracking-wider text-amber-200/80">Running...</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-emerald-500/80"></span>
+              <span className="text-[10px] uppercase tracking-wider text-emerald-200/80">Ready</span>
+            </div>
+          )}
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        
+        <div className="flex items-center gap-1.5">
           <Button
-            variant={showStdin ? "secondary" : "ghost"}
+            variant="ghost"
             size="sm"
             onClick={() => setShowStdin(!showStdin)}
-            className="h-7 rounded-full px-2.5 text-[11px]"
+            className={cn(
+               "h-6 rounded-md px-2 font-mono text-[9px] uppercase tracking-wider transition-all",
+               showStdin 
+                ? "bg-white/[0.08] text-foreground" 
+                : "text-muted-foreground/60 hover:bg-white/[0.05] hover:text-foreground"
+            )}
           >
-            {showStdin ? "Hide stdin" : "Program input"}
+            {showStdin ? "Close Input" : "Program Input"}
           </Button>
-          {isExecuting ? (
-            <div className="rounded-full border border-white/8 bg-white/[0.03] px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-              Running...
-            </div>
-          ) : null}
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setHistory([])}
+            className="h-6 rounded-md px-2 font-mono text-[9px] uppercase tracking-wider text-muted-foreground/60 hover:bg-white/[0.05] hover:text-foreground"
+          >
+            Clear
+          </Button>
+
+          <div className="h-3 w-px bg-white/10 mx-0.5" />
+          
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={useEditorStore.getState().toggleTerminal}
+            className="h-6 w-6 rounded-md p-0 text-muted-foreground/60 hover:bg-white/[0.06] hover:text-foreground/90 transition-colors"
+          >
+            <X className="h-3.5 w-3.5" />
+          </Button>
         </div>
       </div>
 
       {showStdin ? (
-        <div className="border-b border-white/8 bg-surface/70 p-3">
-          <p className="mb-2 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-            Program Input Buffer
+        <div className="border-b border-white/5 bg-white/[0.005] p-3">
+          <p className="mb-2 text-[9px] uppercase tracking-widest text-muted-foreground/50">
+            Buffer for standard input
           </p>
           <Textarea
             value={stdin}
             onChange={(e) => setStdin(e.target.value)}
-            placeholder={"One line per input call\nEx: Arnev\n25"}
-            className="min-h-[64px] font-mono text-xs"
+            placeholder={"Enter input here (one line per prompt)..."}
+            className="min-h-[72px] border-white/5 bg-white/[0.01] font-mono text-[13px] text-foreground/80 placeholder:text-muted-foreground/30 focus-visible:ring-primary/20"
           />
         </div>
       ) : null}
 
       <ScrollArea className="flex-1">
-        <div className="space-y-1.5 p-3">
-          {history.map((line, index) => (
-            <div
-              key={`${line}-${index}`}
-              className={`whitespace-pre-wrap break-all ${
-                line.startsWith("$")
-                  ? "text-primary"
-                  : line.startsWith("Error")
-                    ? "text-destructive"
-                    : "text-foreground/82"
-              }`}
-            >
-              {line}
-            </div>
-          ))}
+        <div className="space-y-1 p-4 font-mono leading-relaxed">
+          {history.map((line, index) => {
+            const isCommand = line.startsWith("$");
+            const isError = line.startsWith("Error");
+            const isSuccess = line.startsWith("Process exited with code 0");
+
+            return (
+              <div
+                key={`${line}-${index}`}
+                className={cn(
+                  "whitespace-pre-wrap break-all transition-colors",
+                  isCommand ? "text-primary/90 font-bold" :
+                  isError ? "text-rose-400/90" :
+                  isSuccess ? "text-emerald-400/90" :
+                  "text-foreground/70"
+                )}
+              >
+                {line}
+              </div>
+            );
+          })}
           <div ref={endRef} />
         </div>
       </ScrollArea>
 
-      <div className="border-t border-white/8 bg-surface/85 px-3 py-2">
-        <div className="flex items-center gap-2 rounded-xl border border-white/8 bg-white/[0.025] px-3 py-2">
-          <span className="select-none text-muted-foreground">$</span>
+      <div className="border-t border-white/5 bg-white/[0.005] px-4 py-2.5">
+        <div className="flex items-center gap-3 rounded-lg border border-white/5 bg-white/[0.01] px-3 py-1.5 focus-within:border-primary/30 focus-within:bg-white/[0.02] transition-all">
+          <span className="select-none text-[11px] font-bold text-primary/50">$</span>
           <input
             autoFocus
-            className="w-full flex-1 bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground"
+            className="w-full flex-1 bg-transparent text-[13px] text-foreground/90 outline-none placeholder:text-muted-foreground/30"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
